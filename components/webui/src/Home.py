@@ -13,31 +13,28 @@
 # limitations under the License.
 
 import streamlit as st  # type: ignore
-from dpu.components import LOGO
+from dpu.components import LOGO, TITLE_LOGO
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 st.set_page_config(
-    page_title="EKS Web UI",
-    page_icon=LOGO,
+    page_title="Simmons InfoLink",
+    page_icon=TITLE_LOGO,
     layout="wide",
 )
 
-cols = st.columns([10, 90])
-with cols[0]:
+image_col, title_col = st.columns([1, 2])
+with image_col:
     st.write("")
-    st.image(LOGO, "", 64)
-with cols[1]:
-    st.title(":green[Enterprise Knowledge Solution (EKS) Web UI]")
-
+    st.image(LOGO, "", 256)
+with title_col:
+    st.title(":green[Simmons InfoLink]")
 st.markdown("""   """)
 st.markdown(
     """
     ### About
-    This app demonstrates the search and summarization capabilities of the
-    Enterprise Knowledge Solution (EKS).
-
+    Simmons InfoLink is an advanced application designed to search and summarize documents, providing precise answers with citations for improved knowledge access and decision-making.
     The app integrates with the Vertex AI Agent Builder using APIs.
 """
 )

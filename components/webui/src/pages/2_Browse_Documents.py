@@ -18,22 +18,22 @@ import pathlib
 import pandas as pd  # type: ignore
 import streamlit as st  # type: ignore
 from dpu.api import fetch_all_agent_docs
-from dpu.components import LOGO, show_agent_document
+from dpu.components import TITLE_LOGO, LOGO, show_agent_document
 from st_aggrid import AgGrid, ColumnsAutoSizeMode, GridOptionsBuilder  # type: ignore
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
 st.set_page_config(
     page_title="Browse Documents",
-    page_icon=LOGO,
+    page_icon=TITLE_LOGO,
     layout="wide",
 )
 
-cols = st.columns([10, 90])
-with cols[0]:
+image_col, title_col = st.columns([1, 2])
+with image_col:
+    st.image(LOGO, width=256)
     st.write("")
-    st.image(LOGO, "", 64)
-with cols[1]:
+with title_col:
     st.title(":green[Document Corpus]")
 st.divider()
 st.markdown("""Full Document corpus accessible to the Search App.""")

@@ -14,7 +14,7 @@
 
 import streamlit as st  # type: ignore
 from dpu.api import generate_answer
-from dpu.components import LOGO, PREAMBLE, choose_source_id, show_agent_document
+from dpu.components import TITLE_LOGO, LOGO, PREAMBLE, choose_source_id, show_agent_document
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -53,16 +53,16 @@ What were the key highlights of Simmons Bank's Q3 2021?
 # Page configuration
 st.set_page_config(
     page_title="Search and Summarization",
-    page_icon=LOGO,
+    page_icon=TITLE_LOGO,
     layout="wide",
 )
 
 # Title
-image_col, text_col = st.columns([10, 90])
+image_col, title_col = st.columns([1, 2])
 with image_col:
     st.write("")
-    st.image(LOGO, "", 64)
-with text_col:
+    st.image(LOGO, "", 256)
+with title_col:
     st.title(":green[Search and Summarize Documents]")
 st.divider()
 
