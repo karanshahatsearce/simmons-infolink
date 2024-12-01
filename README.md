@@ -77,15 +77,15 @@ To deploy this solution, perform the follow steps:
 1.  Set the following environment variables:
 
     ```sh
-    export PROJECT_ID="<your Google Cloud project id>"
-    export REGION="<Google Cloud Region for deploying the resources>"
-    export IAP_ADMIN_ACCOUNT="the email of the group or user identity displayed as the support_email field on Oauth consent screen. This must be either the email of the user running the script, or a group of which they are Owner."
+    export PROJECT_ID="applied-ai-practice00"
+    export REGION="us"
+    export IAP_ADMIN_ACCOUNT="karan.shah@searce.com"
     ```
 
     1.  (Optional) By default, this repository automatically creates and uses a service account "deployer@$PROJECT_ID.iam.gserviceaccount.com" to deploy terraform resources. The necessary IAM roles and authentication are automatically configured in the setup script for ease of dpeloyment. If you have a service account in your existing terraform pipeline that you want to use instead, additionally set the optional environment variables to configure your custom deployer service account with the least privilege IAM roles:
 
         ```sh
-        export SERVICE_ACCOUNT_ID="your existing service account identity to be used for Terraform."
+        export SERVICE_ACCOUNT_ID="karan.shah@searce.com"
         ```
 
 1.  Run the following script to setup your environment and your cloud project for running terraform. This script configures the following:
@@ -107,25 +107,25 @@ To deploy this solution, perform the follow steps:
 1.  Initialize Terraform:
 
     ```sh
-    terraform init
+    terraform init --upgrade
     ```
 
 1.  Create a terraform.tfvars file with the following variables:
 
-    ```sh
-    project_id = # Your Google Cloud project ID.
-    region = # The desired region for deploying single-region resources (e.g., "us-central1", "europe-west1").
-    vertex_ai_data_store_region = # The multiregion for your Agent Builder Data Store, the possible values are ("global", "us", or "eu").
-    docai_location = # Sets the location for Document AI service.
-    webui_domains = # Your domain name for Web UI access (e.g., ["webui.example.com"])
-    iap_access_domains = # List of domains granted for IAP access to the Web UI (e.g., ["domain:example.com"])
-    ```
+      ```sh
+         project_id = “applied-ai-practice00”
+         region = “us-central1”
+         vertex_ai_data_store_region = “global”
+         docai_location = “us”
+         webui_domains = [“infolink.simmonsbank.com”]
+         iap_access_domains = ["domain:simmonsbank.com"]
+      ```
 
     1.  (Optional) By default, this repository creates a new VPC network in the same project as other resources. You can use an existing VPC network instead by configuring optional terraform variables.
 
         ```sh
-        create_vpc_network = false # default is true
-        vpc_name = # The name of your existing vpc, (e.g., "myvpc")
+         create_vpc_network = true
+         vpc_name = “practice-ai-vpc”
         ```
 
         If using an existing VPC, you should validate that your existing vpc has firewall policies and DNS zones that enable the traffic pathways defined in [vpc.tf](enterprise-knowledge-solution/components/common-infra/terraform/vpc.tf), and grant Compute Network User on your shared VPC to the deployer service account.

@@ -7,28 +7,28 @@ The Web-UI is a Web App to interface with Vertex AI Agent Builder using REST API
 Set environment variables:
 
 ```commandline
-export PROJECT_ID=[your-project-id]
-export AGENT_BUILDER_DATA_STORE_ID=[your-search-datastore-id]
-export AGENT_BUILDER_LOCATION=[your-search-datastore-region]
-export AGENT_BUILDER_SEARCH_ID=[your-search-app-id]
+export PROJECT_ID="applied-ai-practice00"
+export AGENT_BUILDER_DATA_STORE_ID="eks-data-store"
+export AGENT_BUILDER_LOCATION="global"
+export AGENT_BUILDER_SEARCH_ID="ent-search-agent"
 ```
 
 Command to create a virtual environment if building this App for the first time.
 
 ```commandline
-python -m venv .venv
+python3 -m venv .venv
 ```
 
 Activate the virtual environment
 
-```commandlin
+```commandline
 source .venv/bin/activate
 ```
 
 Install dependencies
 
 ```commandline
-pip install -r requirements.txt
+pip install -r ../../components/webui/requirements.txt
 ```
 
 Initialize gcloud and set project
@@ -46,7 +46,7 @@ gcloud auth application-default login
 Launch
 
 ```commandline
-streamlit run src/Home.py
+streamlit run ../../components/webui/src/Home.py
 ```
 
 ## Deploy to Cloud Run

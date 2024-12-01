@@ -181,6 +181,8 @@ def _document_to_dict(doc: Document) -> Optional[dict]:
         )
 
     def struct_data_to_dict(struct_data) -> Dict:
+        if struct_data is None:
+            return {}
         if type(struct_data).__name__ == "MapComposite":
             return MessageToDict(to_proto(struct_data.pb))
         return MessageToDict(struct_data)

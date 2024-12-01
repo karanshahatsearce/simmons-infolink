@@ -111,14 +111,14 @@ with st.container():
         logger.info(f"preamble update: {st.session_state.preamble_new}")
         st.session_state.preamble = st.session_state.preamble_new
 
-    preamble_new = st.text_area(
-        ":blue[Change the :orange[***search context***] below:]",
-        value=st.session_state["preamble"],
-        placeholder="Search Context",
-        key="preamble_new",
-        on_change=update_preamble,
-        height=140,
-    )
+    # preamble_new = st.text_area(
+    #     ":blue[Change the :orange[***search context***] below:]",
+    #     value=st.session_state["preamble"],
+    #     placeholder="Search Context",
+    #     key="preamble_new",
+    #     on_change=update_preamble,
+    #     height=140,
+    # )
 
     def question_change():
         result = generate_answer(
