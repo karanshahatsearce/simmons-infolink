@@ -21,6 +21,13 @@ from dpu.api import fetch_all_agent_docs
 from dpu.components import TITLE_LOGO, LOGO, show_agent_document
 from st_aggrid import AgGrid, ColumnsAutoSizeMode, GridOptionsBuilder  # type: ignore
 from google.cloud import storage
+from google.cloud import discoveryengine_v1beta as discoveryengine
+import mimetypes
+
+PROJECT_ID = os.environ["PROJECT_ID"]
+LOCATION = os.environ["AGENT_BUILDER_LOCATION"]
+SEARCH_DATASTORE_ID = os.environ["AGENT_BUILDER_DATA_STORE_ID"]
+SEARCH_APP_ID = os.environ["AGENT_BUILDER_SEARCH_ID"]
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -31,6 +38,20 @@ def upload_to_gcs(bucket_name, destination_blob_name, file):
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_file(file)
     return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
+
+# Function to fetch and process document data
+def get_document_dataframe():
+    """Fetch and process document data for display."""
+    df = pd.DataFrame(fetch_all_agent_docs())
+    if len(df) > 0:
+        df["bucket"] = df["uri"].str.extract(r"gs://([^/]*)/")
+        df["path"] = df["uri"].str.extract(r"gs://[^/]*/(.*)$")
+        df["name"] = df["path"].apply(lambda p: pathlib.Path(p).name)
+        common_prefix = os.path.commonprefix(
+            df["path"].apply(lambda p: pathlib.Path(p).parent).to_list()
+        )
+        df["full_name"] = df["path"].apply(lambda p: p[len(common_prefix) :])
+    return df
 
 st.set_page_config(
     page_title="Browse and Upload Documents",
@@ -47,21 +68,9 @@ with title_col:
 st.divider()
 st.markdown("""Full Document corpus accessible to the Search App.""")
 
-df = pd.DataFrame(fetch_all_agent_docs())
+df = get_document_dataframe()
 
 if len(df) > 0:
-
-    # Extract bucket and path
-    df["bucket"] = df["uri"].str.extract(r"gs://([^/]*)/")
-    df["path"] = df["uri"].str.extract(r"gs://[^/]*/(.*)$")
-
-    # Extract parent and name from the path
-    df["name"] = df["path"].apply(lambda p: pathlib.Path(p).name)
-    common_prefix = os.path.commonprefix(
-        df["path"].apply(lambda p: pathlib.Path(p).parent).to_list()
-    )
-    df["full_name"] = df["path"].apply(lambda p: p[len(common_prefix) :])
-
     gb = GridOptionsBuilder()
     gb.configure_column("name", header_name="Name", flex=0)
     gb.configure_column("full_name", header_name="Full Name", flex=1)
@@ -82,7 +91,13 @@ if len(df) > 0:
 # Upload Functionality
 st.divider()
 st.markdown("### Upload a Document to GCS")
-bucket_name = df["bucket"].iloc[0]
+
+if len(df) > 0:
+    bucket_name = df["bucket"].iloc[0]
+else:
+    st.warning("No bucket information available.")
+    bucket_name = st.text_input("Enter GCS Bucket Name") 
+
 file = st.file_uploader("Choose a file to upload: ")
 
 if file and bucket_name:
@@ -90,7 +105,10 @@ if file and bucket_name:
         try:
             destination_blob_name = file.name
             with st.spinner("Uploading file..."):
-                result = upload_to_gcs(bucket_name, destination_blob_name, file)
-            st.success(result)
+                # Upload file to GCS
+                upload_to_gcs(bucket_name, destination_blob_name, file)
+            st.success(f"File {destination_blob_name} uploaded to GCS.")
+
+            df = pd.DataFrame(fetch_all_agent_docs())
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
