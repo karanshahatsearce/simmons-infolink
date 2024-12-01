@@ -21,35 +21,31 @@ logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccess
 # Put into a single place
 SAMPLE_QUERIES = """
 ```
-    Generate a Table to summarize the Quarterly Revenue
-of Google Cloud in 2024, 2023, and 2022.
+Provide a detailed summary of Simmons Bank's financial.
 ```
 ```
-    How many shares the Intelligent Group Limited offers
-in their IPO filing?
+Give me the book value of Q4 2022.
 ```
 ```
-    Create a table showing 2021 and 2022 annual revenue
-of RYDE, and INTJ? Summarize the results.
+What was the Loan to deposit ratio in Q4 2023?
 ```
 ```
-    Summarize the outage in Denver.
+What was the Loan to deposit ratio in Q2 2022?
 ```
 ```
-    How long was the outage duration in Denver?
+Net charge-off ratio in Q3 2023?
 ```
 ```
-    List the incident number, owner,  RCA analyst, data,
-root cause, and resolution for ticket #: T010101?
+What were the Salaries and employee benefits in Q1 2023?
 ```
 ```
-    Who is Sally Walker?
+Summarize the financials for the entire 2023 year for Simmons Bank.
 ```
 ```
-    Display a CPT1 Code for the clinical laboratory
-service: "Cell enumeration phys interp"?
+What were the key highlights of Simmons Bank's Q3 2021?
 ```
 """
+
 #
 # Page Layout
 #
@@ -108,7 +104,7 @@ with st.container():
         st.session_state.answer = result["answer"]
         st.session_state.sources = result["sources"]
         
-    query_col, button_col = st.columns([10, 1])
+    query_col, button_col, example_col = st.columns([85, 10, 15])
 
     with query_col:
         question = st.text_input(
@@ -129,7 +125,7 @@ with st.container():
                 width: 100%;
                 height: 30px; /* Matches the height of the text input box */
                 font-size: 16px;
-                background-color: #007BFF;
+                background-color: #007BFF;  
                 color: white;
                 border: none;
                 border-radius: 5px;
@@ -143,6 +139,14 @@ with st.container():
             """,
             unsafe_allow_html=True,
         )
+    
+        with example_col:
+            # Add spacing for alignment
+            st.write("")
+            st.write("")
+            
+            with st.popover("Examples"):
+                st.markdown(SAMPLE_QUERIES, unsafe_allow_html=True)
 
 # Render the answer if there is a response
 if st.session_state.answer:
