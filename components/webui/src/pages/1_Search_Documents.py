@@ -50,7 +50,6 @@ root cause, and resolution for ticket #: T010101?
 service: "Cell enumeration phys interp"?
 ```
 """
-
 #
 # Page Layout
 #
@@ -71,11 +70,9 @@ with text_col:
     st.title(":green[Search and Summarize Documents]")
 st.divider()
 
-
 #
 # Initialize session state
 #
-
 
 if "answer" not in st.session_state:
     st.session_state["answer"] = ""
@@ -90,35 +87,19 @@ if "preamble" not in st.session_state:
 # Form
 #
 
-
-st.markdown(
-    """### Given a query, EKS will generate an answer with citations to the documents."""
+st.write(
+    """### Given a query, Simmons InfoLink will generate an answer with citations to the documents."""
 )
 
 if "preamble" not in st.session_state:
     st.session_state["preamble"] = PREAMBLE
 
-my_js = """ const textArea = document.querySelector('.textarea-test')
-    textArea.addEventListener('input',(e)=>{
-    textArea.style.height = "auto"
-    textArea.style.height = '${textArea.scrollHeight}px';
-    }) """
-
-# Render the question
+# Render the question input and Examples button
 with st.container():
 
     def update_preamble():
         logger.info(f"preamble update: {st.session_state.preamble_new}")
         st.session_state.preamble = st.session_state.preamble_new
-
-    # preamble_new = st.text_area(
-    #     ":blue[Change the :orange[***search context***] below:]",
-    #     value=st.session_state["preamble"],
-    #     placeholder="Search Context",
-    #     key="preamble_new",
-    #     on_change=update_preamble,
-    #     height=140,
-    # )
 
     def question_change():
         result = generate_answer(
@@ -126,41 +107,48 @@ with st.container():
         )
         st.session_state.answer = result["answer"]
         st.session_state.sources = result["sources"]
+        
+    query_col, button_col = st.columns([10, 1])
 
-    question_col, example_col = st.columns([85, 15])
-    with question_col:
+    with query_col:
         question = st.text_input(
-            ":blue[Type a :orange[***question***] in the box below:]",
+            label="",
             value="",
-            placeholder="Question",
+            placeholder="e.g., What are Simmons Bank Q1 2023 details?",
             key="question",
             on_change=question_change,
         )
-    with example_col:
+
+    with button_col:
         st.write("")
-        with st.popover("Examples"):
-            st.markdown(SAMPLE_QUERIES, unsafe_allow_html=True)
+        st.write("")
+        st.markdown(
+            """
+            <style>
+            .enter-button {
+                width: 100%;
+                height: 30px; /* Matches the height of the text input box */
+                font-size: 16px;
+                background-color: #007BFF;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            .enter-button:hover {
+                background-color: #0056b3;
+            }
+            </style>
+            <button class="enter-button">Enter</button>
+            """,
+            unsafe_allow_html=True,
+        )
 
-
-# Render answer if there's a summary returned in the response
+# Render the answer if there is a response
 if st.session_state.answer:
-
-    # st.text_area(":blue[Summary Response: ]", value=st.session_state.answer, height=240)
-    st.write(":blue[Summary Response: ]")
+    st.markdown("### :blue[Summary Response:]")
     ans = st.session_state.answer
-    printable_ans = (
-        f'<div style=\'font-size:1rem; font-family:"Arial", sans-serif; word-wrap: break-word;'
-        f"color:blue;'>{ans}</div>"
-    )
-    # st.text_area(":blue[Summary Response: ]", value=ans, height=240)
-
-    tab1, tab2 = st.tabs(["Markdown", "Text"])
-
-    with tab1:
-        st.markdown(ans.format())
-    with tab2:
-        st.html(printable_ans.format())
-
+    st.text_area("Summary", value=ans, height=240)
 
 # Render list of other documents
 if st.session_state.sources:
