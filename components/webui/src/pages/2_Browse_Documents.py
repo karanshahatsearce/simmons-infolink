@@ -20,11 +20,20 @@ import streamlit as st  # type: ignore
 from dpu.api import fetch_all_agent_docs
 from dpu.components import TITLE_LOGO, LOGO, show_agent_document
 from st_aggrid import AgGrid, ColumnsAutoSizeMode, GridOptionsBuilder  # type: ignore
+from google.cloud import storage
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
+def upload_to_gcs(bucket_name, destination_blob_name, file):
+    """Uploads a file to the specified GCS bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_file(file)
+    return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
+
 st.set_page_config(
-    page_title="Browse Documents",
+    page_title="Browse and Upload Documents",
     page_icon=TITLE_LOGO,
     layout="wide",
 )
@@ -69,3 +78,19 @@ if len(df) > 0:
 
     if data["selected_rows"] is not None and len(data["selected_rows"]) > 0:
         show_agent_document(data["selected_rows"].iloc[0]["id"])
+
+# Upload Functionality
+st.divider()
+st.markdown("### Upload a Document to GCS")
+bucket_name = df["bucket"].iloc[0]
+file = st.file_uploader("Choose a file to upload: ")
+
+if file and bucket_name:
+    if st.button("Upload"):
+        try:
+            destination_blob_name = file.name
+            with st.spinner("Uploading file..."):
+                result = upload_to_gcs(bucket_name, destination_blob_name, file)
+            st.success(result)
+        except Exception as e:
+            st.error(f"An error occurred during upload: {e}")
