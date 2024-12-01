@@ -15,8 +15,9 @@
 import streamlit as st  # type: ignore
 from dpu.api import generate_answer
 from dpu.components import TITLE_LOGO, LOGO, PREAMBLE, choose_source_id, show_agent_document
-
+from fpdf import FPDF
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
+import base64
 
 # Put into a single place
 SAMPLE_QUERIES = """
@@ -153,6 +154,38 @@ if st.session_state.answer:
     st.markdown("### :blue[Summary Response:]")
     ans = st.session_state.answer
     st.text_area("Summary", value=ans, height=240)
+
+# Add an export as PDF button here
+def create_download_link(value, filename):
+    """Generate a download link for the PDF."""
+    b64 = base64.b64encode(value)
+    return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
+
+# Export to PDF button
+export_as_pdf = st.button("Export Report")
+if export_as_pdf:
+    # Create PDF instance
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 16)
+
+    # Add a title to the PDF
+    pdf.cell(200, 10, "Simmons InfoLink - Summary Response", ln=True, align="C")
+    pdf.ln(10)  # Add a line break
+
+    # Add the wrapped text from session state
+    pdf.set_font('Arial', '', 12)
+    pdf.multi_cell(0, 10, st.session_state.answer)  # Use multi_cell for wrapping
+
+    # Generate PDF as bytes
+    pdf_output = pdf.output(dest="S").encode("latin-1")
+
+    # Create a download link
+    html = create_download_link(pdf_output, "summary_response")
+
+    # Display the download link
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # Render list of other documents
 if st.session_state.sources:

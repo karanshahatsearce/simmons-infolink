@@ -5,3 +5,4 @@ grpcio
 grpcio-tools
 google-cloud-discoveryengine
 google-cloud-storage
+FPDF
