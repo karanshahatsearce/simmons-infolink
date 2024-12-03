@@ -46,7 +46,7 @@ def upload_to_gcs(bucket_name, destination_blob_name, local_file_path):
     # Use upload_from_filename for local file paths
     blob.upload_from_filename(local_file_path)
     
-    return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
+    return f"File {destination_blob_name} uploaded."
 
 def batch_process_document(project_id, location, processor_id, input_gcs_uri, output_gcs_uri):
     """Processes a document using Document AI Batch API."""
@@ -120,7 +120,7 @@ def summarize_document_with_docai(project_id, location, processor_id, file_path,
 
 def summarize_with_gemini(text):
     model = GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content([f"Please summarize the following content and write it in such a way that it doesn't include anything that is irrelevant: \n\n{text}. Give me 500 words."])
+    response = model.generate_content([f"Please summarize the following content in a concise manner, ensuring that only relevant information is included. The summary should be written in exactly 500 words. Structure the response with two paragraphs for a high-level overview and a bulleted list of detailed points. Use the exact wording from the provided content where possible. Do not add any additional information, and avoid bolding any text. DO NOT TRY TO BOLD ANYTHING! \n\n{text}"])
     return response.text
 
 def extract_text_from_pdf(pdf_file):

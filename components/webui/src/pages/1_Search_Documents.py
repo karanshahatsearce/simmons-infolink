@@ -132,7 +132,7 @@ with st.container():
 
 
 # Upload Functionality
-st.markdown("### Upload a Document to GCS")
+st.markdown("### Upload a Document")
 
 df = get_document_dataframe()
 if len(df) > 0:
@@ -151,6 +151,7 @@ if "query_triggered" not in st.session_state:
 
 
 
+doc_summary = ""
 if file and bucket_name:
     if st.button("Upload"):
         try:
@@ -166,10 +167,10 @@ if file and bucket_name:
                 st.success(message)
 
             text = extract_text_from_pdf(local_file_path)
-            summary = summarize_with_gemini(text)
-            # Display the final summary
-            st.markdown("### :blue[Document Summary:]")
-            st.text_area("Summary", value=summary, height=240, key="summary2")
+            doc_summary = summarize_with_gemini(text)
+
+            st.session_state["upload_triggered"] = True
+            st.session_state["query_triggered"] = False
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
 
@@ -209,6 +210,8 @@ with button_col:
             )
             st.session_state.answer = result["answer"]
             st.session_state.sources = result["sources"]
+            st.session_state["query_triggered"] = True
+            st.session_state["upload_triggered"] = False
         except Exception as e:
             st.error(f"An error occurred while processing the query: {e}")
 
@@ -221,16 +224,26 @@ with example_col:
 
 st.divider()
 
+# Handle and display the relevant summary
+if st.session_state["query_triggered"]:
+    st.session_state["current_summary"] = st.session_state.answer
+    st.session_state["current_summary_type"] = "query"
+    st.markdown("### :blue[Query-Based Summary:]")
+    st.text_area("Summary", value=st.session_state.answer, height=240, key="query_summary_textarea")
+
+elif st.session_state["upload_triggered"]:
+    st.session_state["current_summary"] = doc_summary
+    st.session_state["current_summary_type"] = "upload"
+    st.markdown("### :blue[Document-Based Summary:]")
+    st.text_area("Summary", value=doc_summary, height=240, key="upload_summary_textarea")
+
 # Logic to avoid simultaneous execution
 if st.session_state["upload_triggered"] and st.session_state["query_triggered"]:
     st.warning("Please complete one action (Upload or Query) at a time.")
-elif st.session_state["query_triggered"] and st.session_state.answer:
-    # Render the answer if there is a response
-    st.markdown("### :blue[Summary Response:]")
-    ans = st.session_state.answer
-    st.text_area("Summary", value=ans, height=240, key="summary3")
-elif st.session_state["upload_triggered"]:
-    st.info("Upload completed successfully. This document has been summarized below.")
+
+# Inform about successful upload
+elif st.session_state["upload_triggered"] and not st.session_state["query_triggered"]:
+    st.info("Upload completed successfully.")
 
 # Add an export as PDF button here
 def create_download_link(value, filename):
@@ -239,7 +252,7 @@ def create_download_link(value, filename):
     return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
 
 # Render the answer if there is a response
-if st.session_state.answer:
+if st.session_state.get("current_summary"):
     username = "karan shah"
 
     if username.strip() == "":
