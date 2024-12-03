@@ -31,13 +31,6 @@ SEARCH_APP_ID = os.environ["AGENT_BUILDER_SEARCH_ID"]
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
-def upload_to_gcs(bucket_name, destination_blob_name, file):
-    """Uploads a file to the specified GCS bucket."""
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_file(file)
-    return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
 
 # Function to fetch and process document data
 def get_document_dataframe():
@@ -87,29 +80,3 @@ if len(df) > 0:
 
     if data["selected_rows"] is not None and len(data["selected_rows"]) > 0:
         show_agent_document(data["selected_rows"].iloc[0]["id"])
-
-# Upload Functionality
-st.divider()
-st.markdown("### Upload a Document to GCS")
-
-if len(df) > 0:
-    bucket_name = df["bucket"].iloc[0]
-else:
-    st.warning("No bucket information available.")
-    bucket_name = st.text_input("Enter GCS Bucket Name") 
-
-file = st.file_uploader("Choose a file to upload: ")
-
-if file and bucket_name:
-    if st.button("Upload"):
-        try:
-            destination_blob_name = file.name
-            with st.spinner("Uploading file..."):
-                # Upload file to GCS
-                upload_to_gcs(bucket_name, destination_blob_name, file)
-            st.success(f"File {destination_blob_name} uploaded to GCS.")
-
-            df = pd.DataFrame(fetch_all_agent_docs())
-            print(df)
-        except Exception as e:
-            st.error(f"An error occurred during upload: {e}")

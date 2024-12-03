@@ -173,7 +173,11 @@ enable_api() {
 
 # enable all apis in the array
 enable_bootstrap_apis() {
-  readarray -t apis_array <project_apis.txt
+  apis_array=()
+  while IFS= read -r line; do
+    apis_array+=("$line")  # Append each line to the array
+  done < project_apis.txt
+  # readarray -t apis_array <project_apis.txt
   for i in "${apis_array[@]}"; do
     enable_api "$i"
   done
@@ -191,7 +195,12 @@ enable_persona_roles() {
   local __principal=$1
   local __arrayfile=$2
   local __persona_name=$3
-  readarray -t roles_array <"$__arrayfile"
+  # readarray -t roles_array <"$__arrayfile"
+  roles_array=()  # Initialize an empty array
+  while IFS= read -r line; do
+      roles_array+=("$line")  # Append each line to the array
+  done < "$__arrayfile"
+  
   for i in "${roles_array[@]}"; do
     if [ "$__persona_name" == "READER" ] && [ "$i" == "roles/storage.objectViewer" ]; then
       #Most roles for most persona are project-level, but READER requires one bucket-level role.

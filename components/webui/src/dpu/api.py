@@ -99,7 +99,7 @@ def generate_answer(
         # For information about search summaries, refer to:
         # https://cloud.google.com/generative-ai-app-builder/docs/get-search-summaries
         summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
-            summary_result_count=5,
+            summary_result_count=10,
             include_citations=True,
             ignore_adversarial_query=True,
             ignore_non_summary_seeking_query=True,
@@ -107,12 +107,12 @@ def generate_answer(
                 preamble=preamble,
             ),
             model_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec.ModelSpec(
-                version="stable",
+                version="gemini-1.5-flash-002/answer_gen/v1"
             ),
         ),
         extractive_content_spec=discoveryengine.SearchRequest.ContentSearchSpec.ExtractiveContentSpec(
-            max_extractive_answer_count=3,
-            max_extractive_segment_count=3,
+            max_extractive_answer_count=5,
+            max_extractive_segment_count=5,
             return_extractive_segment_score=True,
         ),
     )

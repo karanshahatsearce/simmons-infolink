@@ -21,6 +21,7 @@ import base64
 from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
+from dpu.utils import get_document_dataframe
 
 # Put into a single place
 SAMPLE_QUERIES = """
@@ -165,6 +166,49 @@ with st.container():
             with st.popover("Examples"):
                 st.markdown(SAMPLE_QUERIES, unsafe_allow_html=True)
 
+st.markdown(
+    """
+    <div style='text-align: center; display: flex; align-items: center; font-size: 24px'>
+        <hr style='flex-grow: 1; margin: 0 10px;'>OR<hr style='flex-grow: 1; margin: 0 10px;'>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+def upload_to_gcs(bucket_name, destination_blob_name, file):
+    """Uploads a file to the specified GCS bucket."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_file(file)
+    return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
+
+# Upload Functionality
+st.markdown("### Upload a Document to GCS")
+
+df = get_document_dataframe()
+if len(df) > 0:
+    bucket_name = df["bucket"].iloc[0]
+else:
+    st.warning("No bucket information available.")
+    bucket_name = st.text_input("Enter GCS Bucket Name") 
+
+file = st.file_uploader("Choose a file to upload: ")
+
+if file and bucket_name:
+    if st.button("Upload"):
+        try:
+            destination_blob_name = file.name
+            with st.spinner("Uploading file..."):
+                # Upload file to GCS
+                upload_to_gcs(bucket_name, destination_blob_name, file)
+            st.success(f"File {destination_blob_name} uploaded to GCS.")
+
+            df = pd.DataFrame(fetch_all_agent_docs())
+            print(df)
+        except Exception as e:
+            st.error(f"An error occurred during upload: {e}")
+
 # Add an export as PDF button here
 def create_download_link(value, filename):
     """Generate a download link for the PDF."""
@@ -178,7 +222,7 @@ if st.session_state.answer:
     st.text_area("Summary", value=ans, height=240)
 
     st.markdown("### Please enter your name: ")
-    username = st.text_input("Name", placeholder="Enter your name here", key="username_input")
+    username = "karan shah"
 
     if username.strip() == "":
         st.warning("Name is required for generating the report.")
@@ -241,7 +285,8 @@ if st.session_state.answer:
                 for i, source in enumerate(st.session_state.sources[:3], start=1):
                     source_title = source.get("title", "Unknown Document")
                     source_url = document_urls.get(source_title, "")
-
+                    link = pdf.add_link()
+                    pdf.link(x=0, y=0, w=50, h=10, link="https://github.com/PyFPDF/fpdf2")
                     if source_url:
                         link = pdf.add_link()
                         # pdf.cell(0, 7, f"[{i}] {source_title}", link="www.google.com", ln=1)

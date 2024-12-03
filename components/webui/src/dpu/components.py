@@ -36,14 +36,7 @@ LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/logo.png")
 TITLE_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/title_logo.png")
 SIMMONS_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/simmons-logo.jpeg")
 # change this to a string
-PREAMBLE = (
-    "I want to find information from the documents stored in the data store. "
-    "The files and attachments in the data store contain information required "
-    "to answer the questions.\n"
-    "Generate answers based on the information in the documents available "
-    "in the data store. Be factual. "
-    "Return only the top two to three sources in the search results. "
-)
+PREAMBLE = "Given the conversation between a user and a Simmons Bank assistant and some search results, create a final answer for the assistant that can provide insights from Simmons Bank Quarterly reports. The answer should use all relevant information from the search results, not introduce any additional information, and use exactly the same words as the search results when possible. The assistant's answer should be more than 50 sentences. The assistant's answer should have one paragraph of summary followed by a formatted bulleted list."
 
 
 #
