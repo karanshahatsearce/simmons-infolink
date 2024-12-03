@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import pandas as pd
 import streamlit as st  # type: ignore
 from dpu.api import generate_answer
 from dpu.components import SIMMONS_LOGO, TITLE_LOGO, LOGO, PREAMBLE, choose_source_id, show_agent_document
@@ -22,6 +24,9 @@ from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
 from dpu.utils import get_document_dataframe
+from google.cloud import storage
+from google.cloud import documentai
+from PyPDF2 import PdfReader, PdfWriter
 
 # Put into a single place
 SAMPLE_QUERIES = """
@@ -88,10 +93,6 @@ if "preamble" not in st.session_state:
 # Form
 #
 
-st.write(
-    """### Given a query, Simmons InfoLink will generate an answer with citations to the documents."""
-)
-
 if "preamble" not in st.session_state:
     st.session_state["preamble"] = PREAMBLE
 
@@ -121,59 +122,6 @@ with st.container():
         )
         st.session_state.answer = result["answer"]
         st.session_state.sources = result["sources"]
-        
-    query_col, button_col, example_col = st.columns([85, 10, 15])
-
-    with query_col:
-        question = st.text_input(
-            label="",
-            value="",
-            placeholder="e.g., What are Simmons Bank Q1 2023 details?",
-            key="question",
-            on_change=question_change,
-        )
-
-    with button_col:
-        st.write("")
-        st.write("")
-        st.markdown(
-            """
-            <style>
-            .enter-button {
-                width: 100%;
-                height: 30px; /* Matches the height of the text input box */
-                font-size: 16px;
-                background-color: #007BFF;  
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-            }
-            .enter-button:hover {
-                background-color: #0056b3;
-            }
-            </style>
-            <button class="enter-button">Enter</button>
-            """,
-            unsafe_allow_html=True,
-        )
-    
-        with example_col:
-            # Add spacing for alignment
-            st.write("")
-            st.write("")
-            
-            with st.popover("Examples"):
-                st.markdown(SAMPLE_QUERIES, unsafe_allow_html=True)
-
-st.markdown(
-    """
-    <div style='text-align: center; display: flex; align-items: center; font-size: 24px'>
-        <hr style='flex-grow: 1; margin: 0 10px;'>OR<hr style='flex-grow: 1; margin: 0 10px;'>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 def upload_to_gcs(bucket_name, destination_blob_name, file):
     """Uploads a file to the specified GCS bucket."""
@@ -193,21 +141,149 @@ else:
     st.warning("No bucket information available.")
     bucket_name = st.text_input("Enter GCS Bucket Name") 
 
-file = st.file_uploader("Choose a file to upload: ")
+file = st.file_uploader("Choose a file to upload and then summarize: ")
+
+# State variables to manage action
+if "upload_triggered" not in st.session_state:
+    st.session_state["upload_triggered"] = False
+if "query_triggered" not in st.session_state:
+    st.session_state["query_triggered"] = False
+
+def summarize_document_with_docai(project_id, location, processor_id, file_path, mime_type):
+    """Summarizes a document using Google Cloud Document AI."""
+    client = documentai.DocumentProcessorServiceClient()
+    processor_name = f"projects/{project_id}/locations/{location}/processors/{processor_id}"
+    with open(file_path, "rb") as f:
+        file_content = f.read()
+    document = {"content": file_content, "mime_type": mime_type}
+    request = {"name": processor_name, "raw_document": document}
+    response = client.process_document(request=request)
+    summary = response.document.text
+    return summary
+
+def split_pdf(input_pdf_path, output_dir, max_pages=15):
+    """Splits a PDF into smaller chunks with a maximum of `max_pages` per file."""
+    reader = PdfReader(input_pdf_path)
+    total_pages = len(reader.pages)
+    chunk_files = []
+    for i in range(0, total_pages, max_pages):
+        writer = PdfWriter()
+        chunk_filename = os.path.join(output_dir, f"chunk_{i // max_pages + 1}.pdf")
+        for page in reader.pages[i:i + max_pages]:
+            writer.add_page(page)
+        with open(chunk_filename, "wb") as output_pdf:
+            writer.write(output_pdf)
+        chunk_files.append(chunk_filename)
+    
+    return chunk_files
 
 if file and bucket_name:
     if st.button("Upload"):
+        st.session_state["upload_triggered"] = True  # Trigger upload
+        st.session_state["query_triggered"] = False  # Disable query trigger
+        local_file_path = None
+        chunk_files = []
         try:
+            local_file_path = f"./{file.name}"
+
+            with open(local_file_path, "wb") as f:
+                f.write(file.getbuffer())
+
+            # Directory to store the chunks
+            output_dir = "./chunks"
+            os.makedirs(output_dir, exist_ok=True)
+
+            # Split the document into smaller chunks
+            chunk_files = split_pdf(local_file_path, output_dir, max_pages=15)
+
+            # Process each chunk
+            summaries = []
+            for chunk_file in chunk_files:
+                summary = summarize_document_with_docai(
+                    project_id="applied-ai-practice00",
+                    location="us",
+                    processor_id="d904e09ed613153d",
+                    file_path=chunk_file,
+                    mime_type="application/pdf",
+                )
+                summaries.append(summary)
+
+            # Combine summaries
+            final_summary = "\n\n".join(summaries)
+
+            # Display the final summary
+            st.markdown("### :blue[Document Summary:]")
+            st.text_area("Summary", value=final_summary, height=240)
+
+            # Upload the original file to GCS
             destination_blob_name = file.name
             with st.spinner("Uploading file..."):
-                # Upload file to GCS
-                upload_to_gcs(bucket_name, destination_blob_name, file)
+                upload_to_gcs(bucket_name, destination_blob_name, local_file_path)
             st.success(f"File {destination_blob_name} uploaded to GCS.")
-
-            df = pd.DataFrame(fetch_all_agent_docs())
-            print(df)
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
+        finally:
+            if local_file_path and os.path.exists(local_file_path):
+                os.remove(local_file_path)
+            for chunk_file in chunk_files:
+                if os.path.exists(chunk_file):
+                    os.remove(chunk_file)
+
+# Query Functionality
+st.markdown(
+    """
+    <div style='text-align: center; display: flex; align-items: center; font-size: 24px'>
+        <hr style='flex-grow: 1; margin: 0 10px;'>OR<hr style='flex-grow: 1; margin: 0 10px;'>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.write(
+    """### Given a query, Simmons InfoLink will generate an answer with citations to the documents."""
+)
+
+query_col, button_col, example_col = st.columns([85, 15, 15])
+
+with query_col:
+    question = st.text_input(
+        label="",
+        value="",
+        placeholder="e.g., What are Simmons Bank Q1 2023 details?",
+        key="question",
+    )
+
+with button_col:
+    st.write("")
+    st.write("")
+    if st.button("Execute Query"):
+        st.session_state["query_triggered"] = True  # Trigger query
+        st.session_state["upload_triggered"] = False  # Disable upload trigger
+        result = generate_answer(
+            st.session_state.question, preamble=st.session_state["preamble"]
+        )
+        st.session_state.answer = result["answer"]
+        st.session_state.sources = result["sources"]
+
+with example_col:
+    st.write("")
+    st.write("")
+    
+    with st.popover("Examples"):
+        st.markdown(SAMPLE_QUERIES, unsafe_allow_html=True)
+
+st.divider()
+
+# Logic to avoid simultaneous execution
+if st.session_state["upload_triggered"] and st.session_state["query_triggered"]:
+    st.warning("Please complete one action (Upload or Query) at a time.")
+elif st.session_state["query_triggered"] and st.session_state.answer:
+    # Render the answer if there is a response
+    st.markdown("### :blue[Summary Response:]")
+    ans = st.session_state.answer
+    st.text_area("Summary", value=ans, height=240)
+elif st.session_state["upload_triggered"]:
+    st.info("Upload completed successfully. This document has been summarized below.")
 
 # Add an export as PDF button here
 def create_download_link(value, filename):

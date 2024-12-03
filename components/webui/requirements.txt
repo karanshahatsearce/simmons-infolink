@@ -8,3 +8,5 @@ google-cloud-storage
 FPDF
 google-generativeai
 google-cloud-aiplatform
+google-cloud-documentai
+PyPDF2
