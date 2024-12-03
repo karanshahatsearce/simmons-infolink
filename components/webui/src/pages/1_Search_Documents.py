@@ -171,6 +171,7 @@ if file and bucket_name:
 
             st.session_state["upload_triggered"] = True
             st.session_state["query_triggered"] = False
+            st.session_state.answer = doc_summary
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
 
@@ -255,23 +256,49 @@ def create_download_link(value, filename):
 if st.session_state.get("current_summary"):
     username = "karan shah"
 
-    if username.strip() == "":
-        st.warning("Name is required for generating the report.")
-
     # Export to PDF button
     export_as_pdf = st.button("Export Report")
     if export_as_pdf:
-        if not username.strip():
-            st.error("Please enter your name to generate the report.")
+        # Create PDF instance
+        st.write(st.session_state["upload_triggered"])
+        pdf = PDF()
+        pdf.add_page()
+        llm = GenerativeModel("gemini-1.5-flash")
+        if st.session_state["upload_triggered"]:
+            title = llm.generate_content("Give me one concise pdf title regarding the following answer: " 
+                                            + st.session_state.answer + " without mentioning 'here are some options'. Also, please do NOT add any hashtags in front of the title you generate.")
+            pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
+            safe_answer = st.session_state.answer.encode("ascii", "ignore").decode("ascii")
+            pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
+
+            pdf.set_font('Times', '', 10)
+            current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
+            pdf.set_xy(150, 23)
+            pdf.cell(0, 10, current_time, align='R')
+
+            # Add the centered title below
+            pdf.set_xy(0, 30)
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, pdf_title, align='C')
+
+            pdf.ln(10)
+
+            # Response and formatted answer
+            pdf.set_font('Times', 'B', 12)
+            pdf.multi_cell(0, 5, "Response:")
+
+            pdf.set_font('Times', '', 12)
+            pdf.multi_cell(0, 5, safe_answer)
+
+            pdf.ln(5)
+
+            pdf_output = pdf.output(dest="S").encode("latin-1")
+            html = create_download_link(pdf_output, "summary_response")
+            st.markdown(html, unsafe_allow_html=True)
         else:
-            # Create PDF instance
-            pdf = PDF()
-            pdf.add_page()
-            
             # Create a custom title using Gemini
-            llm = GenerativeModel("gemini-1.5-flash")
             title = llm.generate_content("Give me one concise pdf title regarding the following query: " 
-                                         + question + " without mentioning here are some options. Also, please do NOT add any hashtags in front of the title you generate.")
+                                            + question + " without mentioning here are some options. Also, please do NOT add any hashtags in front of the title you generate.")
             
             pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
             formatted_question = question.strip().capitalize()
@@ -318,16 +345,7 @@ if st.session_state.get("current_summary"):
                 pdf.set_font('Times', '', 12)
                 for i, source in enumerate(st.session_state.sources[:3], start=1):
                     source_title = source.get("title", "Unknown Document").encode("ascii", "ignore").decode("ascii")
-                    source_url = document_urls.get(source_title, "")
-                    link = pdf.add_link()
-                    pdf.link(x=0, y=0, w=50, h=10, link="https://github.com/PyFPDF/fpdf2")
-                    if source_url:
-                        link = pdf.add_link()
-                        # pdf.cell(0, 7, f"[{i}] {source_title}", link="www.google.com", ln=1)
-                        pdf.link(x=0, y=0, w=50, h=10, link="https://github.com/PyFPDF/fpdf2")
-                    else:
-                        # Add the source title without URL if no URL is given.
-                        pdf.multi_cell(0, 7, f"[{i}] {source_title}")
+                    pdf.multi_cell(0, 7, f"[{i}] {source_title}")
             else:
                 pdf.multi_cell(0, 7, "No sources available.")
 
