@@ -27,6 +27,11 @@ from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_
 from google.cloud import documentai
 from PyPDF2 import PdfReader, PdfWriter
 
+class PDF(FPDF):
+    def header(self):
+        self.set_font("Arial", "B", 12)
+
+
 # Put into a single place
 SAMPLE_QUERIES = """
 ```
@@ -87,7 +92,10 @@ if "chosen_row" not in st.session_state:
     st.session_state["chosen_row"] = None
 if "preamble" not in st.session_state:
     st.session_state["preamble"] = PREAMBLE
-
+if "query_triggered" not in st.session_state:
+    st.session_state["query_triggered"] = False
+if "upload_triggered" not in st.session_state:
+    st.session_state["upload_triggered"] = False
 #
 # Form
 #
@@ -161,7 +169,7 @@ if file and bucket_name:
             summary = summarize_with_gemini(text)
             # Display the final summary
             st.markdown("### :blue[Document Summary:]")
-            st.text_area("Summary", value=summary, height=240)
+            st.text_area("Summary", value=summary, height=240, key="summary2")
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
 
@@ -195,11 +203,14 @@ with button_col:
     if st.button("Execute Query"):
         st.session_state["query_triggered"] = True  # Trigger query
         st.session_state["upload_triggered"] = False  # Disable upload trigger
-        result = generate_answer(
-            st.session_state.question, preamble=st.session_state["preamble"]
-        )
-        st.session_state.answer = result["answer"]
-        st.session_state.sources = result["sources"]
+        try:
+            result = generate_answer(
+                st.session_state.question, preamble=st.session_state["preamble"]
+            )
+            st.session_state.answer = result["answer"]
+            st.session_state.sources = result["sources"]
+        except Exception as e:
+            st.error(f"An error occurred while processing the query: {e}")
 
 with example_col:
     st.write("")
@@ -217,7 +228,7 @@ elif st.session_state["query_triggered"] and st.session_state.answer:
     # Render the answer if there is a response
     st.markdown("### :blue[Summary Response:]")
     ans = st.session_state.answer
-    st.text_area("Summary", value=ans, height=240)
+    st.text_area("Summary", value=ans, height=240, key="summary3")
 elif st.session_state["upload_triggered"]:
     st.info("Upload completed successfully. This document has been summarized below.")
 
@@ -229,11 +240,6 @@ def create_download_link(value, filename):
 
 # Render the answer if there is a response
 if st.session_state.answer:
-    st.markdown("### :blue[Summary Response:]")
-    ans = st.session_state.answer
-    st.text_area("Summary", value=ans, height=240)
-
-    st.markdown("### Please enter your name: ")
     username = "karan shah"
 
     if username.strip() == "":
@@ -246,14 +252,18 @@ if st.session_state.answer:
             st.error("Please enter your name to generate the report.")
         else:
             # Create PDF instance
-            pdf = FPDF()
+            pdf = PDF()
             pdf.add_page()
             
             # Create a custom title using Gemini
             llm = GenerativeModel("gemini-1.5-flash")
             title = llm.generate_content("Give me one concise pdf title regarding the following query: " 
                                          + question + " without mentioning here are some options. Also, please do NOT add any hashtags in front of the title you generate.")
-            pdf_title = title.text.strip()
+            
+            pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
+            formatted_question = question.strip().capitalize()
+            formatted_question = formatted_question.encode("ascii", "ignore").decode("ascii")
+            safe_answer = st.session_state.answer.encode("ascii", "ignore").decode("ascii")
 
             pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
 
@@ -272,7 +282,6 @@ if st.session_state.answer:
             # Query and formatted question
             pdf.set_font('Times', 'B', 12)
             pdf.multi_cell(0, 7, "Query:")
-            formatted_question = question.strip().capitalize()
             pdf.set_font('Times', '', 12)
             pdf.multi_cell(0, 7, formatted_question)
 
@@ -283,7 +292,7 @@ if st.session_state.answer:
             pdf.multi_cell(0, 5, "Response:")
 
             pdf.set_font('Times', '', 12)
-            pdf.multi_cell(0, 5, st.session_state.answer)
+            pdf.multi_cell(0, 5, safe_answer)
 
             pdf.ln(5)
 
@@ -295,7 +304,7 @@ if st.session_state.answer:
             if st.session_state.sources:
                 pdf.set_font('Times', '', 12)
                 for i, source in enumerate(st.session_state.sources[:3], start=1):
-                    source_title = source.get("title", "Unknown Document")
+                    source_title = source.get("title", "Unknown Document").encode("ascii", "ignore").decode("ascii")
                     source_url = document_urls.get(source_title, "")
                     link = pdf.add_link()
                     pdf.link(x=0, y=0, w=50, h=10, link="https://github.com/PyFPDF/fpdf2")
