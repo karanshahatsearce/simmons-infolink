@@ -28,6 +28,7 @@ from google.protobuf.json_format import MessageToDict  # type: ignore
 from google.protobuf.struct_pb2 import (
     Struct,  # type: ignore # pylint: disable=no-name-in-module
 )
+import google.generativeai as genai
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 USER_AGENT = "cloud-solutions/eks-webui-v1"
@@ -110,8 +111,8 @@ def generate_answer(
             ),
         ),
         extractive_content_spec=discoveryengine.SearchRequest.ContentSearchSpec.ExtractiveContentSpec(
-            max_extractive_answer_count=5,
-            max_extractive_segment_count=5,
+            max_extractive_answer_count=3,
+            max_extractive_segment_count=3,
             return_extractive_segment_score=True,
         ),
     )

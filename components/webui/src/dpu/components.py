@@ -34,7 +34,8 @@ logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccess
 
 LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/logo.png")
 TITLE_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/title_logo.png")
-
+SIMMONS_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/simmons-logo.jpeg")
+# change this to a string
 PREAMBLE = (
     "I want to find information from the documents stored in the data store. "
     "The files and attachments in the data store contain information required "

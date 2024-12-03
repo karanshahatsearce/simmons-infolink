@@ -110,5 +110,6 @@ if file and bucket_name:
             st.success(f"File {destination_blob_name} uploaded to GCS.")
 
             df = pd.DataFrame(fetch_all_agent_docs())
+            print(df)
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")

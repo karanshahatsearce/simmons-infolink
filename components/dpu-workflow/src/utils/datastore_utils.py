@@ -19,7 +19,6 @@ from google.cloud import discoveryengine
 
 USER_AGENT = "cloud-solutions/eks-agent-builder-v1"
 
-
 def import_docs_to_datastore(bq_table, data_store_region, datastore_id):
     client_options = (
         ClientOptions(
