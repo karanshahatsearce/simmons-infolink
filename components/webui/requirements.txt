@@ -10,3 +10,4 @@ google-generativeai
 google-cloud-aiplatform
 google-cloud-documentai
 PyPDF2
+pdfplumber

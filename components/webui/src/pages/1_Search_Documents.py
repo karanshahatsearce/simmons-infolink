@@ -23,8 +23,7 @@ import base64
 from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
-from dpu.utils import get_document_dataframe
-from google.cloud import storage
+from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, extract_first_15_pages, summarize_with_gemini, extract_text_from_pdf
 from google.cloud import documentai
 from PyPDF2 import PdfReader, PdfWriter
 
@@ -123,13 +122,6 @@ with st.container():
         st.session_state.answer = result["answer"]
         st.session_state.sources = result["sources"]
 
-def upload_to_gcs(bucket_name, destination_blob_name, file):
-    """Uploads a file to the specified GCS bucket."""
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(destination_blob_name)
-    blob.upload_from_file(file)
-    return f"File {destination_blob_name} uploaded to bucket {bucket_name}."
 
 # Upload Functionality
 st.markdown("### Upload a Document to GCS")
@@ -149,85 +141,29 @@ if "upload_triggered" not in st.session_state:
 if "query_triggered" not in st.session_state:
     st.session_state["query_triggered"] = False
 
-def summarize_document_with_docai(project_id, location, processor_id, file_path, mime_type):
-    """Summarizes a document using Google Cloud Document AI."""
-    client = documentai.DocumentProcessorServiceClient()
-    processor_name = f"projects/{project_id}/locations/{location}/processors/{processor_id}"
-    with open(file_path, "rb") as f:
-        file_content = f.read()
-    document = {"content": file_content, "mime_type": mime_type}
-    request = {"name": processor_name, "raw_document": document}
-    response = client.process_document(request=request)
-    summary = response.document.text
-    return summary
 
-def split_pdf(input_pdf_path, output_dir, max_pages=15):
-    """Splits a PDF into smaller chunks with a maximum of `max_pages` per file."""
-    reader = PdfReader(input_pdf_path)
-    total_pages = len(reader.pages)
-    chunk_files = []
-    for i in range(0, total_pages, max_pages):
-        writer = PdfWriter()
-        chunk_filename = os.path.join(output_dir, f"chunk_{i // max_pages + 1}.pdf")
-        for page in reader.pages[i:i + max_pages]:
-            writer.add_page(page)
-        with open(chunk_filename, "wb") as output_pdf:
-            writer.write(output_pdf)
-        chunk_files.append(chunk_filename)
-    
-    return chunk_files
 
 if file and bucket_name:
     if st.button("Upload"):
-        st.session_state["upload_triggered"] = True  # Trigger upload
-        st.session_state["query_triggered"] = False  # Disable query trigger
-        local_file_path = None
-        chunk_files = []
         try:
+            # Save the uploaded file locally
             local_file_path = f"./{file.name}"
-
             with open(local_file_path, "wb") as f:
                 f.write(file.getbuffer())
 
-            # Directory to store the chunks
-            output_dir = "./chunks"
-            os.makedirs(output_dir, exist_ok=True)
-
-            # Split the document into smaller chunks
-            chunk_files = split_pdf(local_file_path, output_dir, max_pages=15)
-
-            # Process each chunk
-            summaries = []
-            for chunk_file in chunk_files:
-                summary = summarize_document_with_docai(
-                    project_id="applied-ai-practice00",
-                    location="us",
-                    processor_id="d904e09ed613153d",
-                    file_path=chunk_file,
-                    mime_type="application/pdf",
-                )
-                summaries.append(summary)
-
-            # Combine summaries
-            final_summary = "\n\n".join(summaries)
-
-            # Display the final summary
-            st.markdown("### :blue[Document Summary:]")
-            st.text_area("Summary", value=final_summary, height=240)
-
-            # Upload the original file to GCS
+            # Upload the file to GCS
             destination_blob_name = file.name
             with st.spinner("Uploading file..."):
-                upload_to_gcs(bucket_name, destination_blob_name, local_file_path)
-            st.success(f"File {destination_blob_name} uploaded to GCS.")
+                message = upload_to_gcs(bucket_name, destination_blob_name, local_file_path)
+                st.success(message)
+
+            text = extract_text_from_pdf(local_file_path)
+            summary = summarize_with_gemini(text)
+            # Display the final summary
+            st.markdown("### :blue[Document Summary:]")
+            st.text_area("Summary", value=summary, height=240)
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
-        finally:
-            if local_file_path and os.path.exists(local_file_path):
-                os.remove(local_file_path)
-            for chunk_file in chunk_files:
-                if os.path.exists(chunk_file):
-                    os.remove(chunk_file)
 
 # Query Functionality
 st.markdown(
