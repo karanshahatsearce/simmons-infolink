@@ -51,7 +51,6 @@ SEARCH_APP_ID = os.environ["AGENT_BUILDER_SEARCH_ID"]
 #
 
 
-st.cache_resource
 
 
 def search_service_client() -> discoveryengine.SearchServiceClient:
@@ -171,7 +170,6 @@ def generate_answer(
 # Convert documents (whether search or fetched or listed) into a generic object
 #
 
-st.cache_resource
 
 
 def _document_to_dict(doc: Document) -> Optional[dict]:
@@ -227,7 +225,6 @@ def _document_to_dict(doc: Document) -> Optional[dict]:
 #
 
 
-st.cache_resource
 
 
 def document_service_client() -> discoveryengine.DocumentServiceClient:
@@ -243,7 +240,6 @@ def document_service_client() -> discoveryengine.DocumentServiceClient:
     )
 
 
-@st.cache_resource(ttl=3600)
 def fetch_all_agent_docs() -> list[dict]:
     """List Enterprise Search Corpus"""
 
@@ -264,7 +260,6 @@ def fetch_all_agent_docs() -> list[dict]:
     return corpus
 
 
-@st.cache_resource(ttl=3600)
 def fetch_agent_doc(doc_id: str) -> Optional[dict]:
     logger.info(f"Fetching doc id {doc_id}")
     client = document_service_client()
@@ -293,12 +288,10 @@ def fetch_agent_doc(doc_id: str) -> Optional[dict]:
 #
 
 
-@st.cache_resource(show_spinner=False)
 def get_storage_client():
     return storage.Client(client_info=ClientInfo(user_agent=USER_AGENT))
 
 
-@st.cache_resource(ttl=3600, show_spinner="Downloading object...")
 def fetch_gcs_blob(bucket: str, path: str) -> storage.Blob:
     logger.info(f"Downloading object gs://{bucket}/{path}")
     blob = get_storage_client().bucket(bucket).get_blob(path)
