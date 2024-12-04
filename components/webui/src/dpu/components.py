@@ -19,7 +19,7 @@ import re
 
 import pandas as pd  # type: ignore
 import streamlit as st  # type: ignore
-from dpu.api import PROJECT_ID, fetch_agent_doc, fetch_gcs_blob
+from dpu.api import PROJECT_ID, fetch_agent_doc, fetch_gcs_blob, fetch_all_agent_docs
 from st_aggrid import (  # type: ignore
     AgGrid,
     AgGridTheme,
@@ -28,6 +28,8 @@ from st_aggrid import (  # type: ignore
     GridOptionsBuilder,
     JsCode,
 )
+from google.cloud import storage
+from dpu.utils import get_document_dataframe, delete_metadata_from_eks
 
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -117,6 +119,11 @@ def show_gcs_object(
     # Extract the title of the file
     title = pathlib.Path(path).name
 
+    # Fetch the DataFrame for all documents
+    df = get_document_dataframe()
+    matching_row = df[df["name"] == title]
+    document_id = matching_row.iloc[0]["id"]
+
     # Fetch the raw data and content_type
     blob = fetch_gcs_blob(bucket, path)
     data = blob.download_as_bytes()
@@ -132,7 +139,9 @@ def show_gcs_object(
         "text/plain",
     ]
     if content_type in mime_types:
-        col1, col2 = st.columns([20, 185])
+        df = get_document_dataframe()
+        st.write(df)
+        col1, col2, col3 = st.columns([20, 150, 150])
         with col1:
             if use_direct_link:
                 link = (
@@ -152,6 +161,21 @@ def show_gcs_object(
                     mime=content_type,
                     help="Download document",
                 )
+        with col3:
+            if st.button("Delete File"):
+                try:
+                    strorage_client = storage.Client()
+                    bucket = strorage_client.bucket(bucket)
+                    blob = bucket.blob(path)
+                    blob.delete()
+                    delete_metadata_from_eks(document_id)
+                    st.success(f"File {title} successfully deleted")
+
+                    if "documents" in st.session_state:
+                        st.session_state["documents"] = get_document_dataframe()
+                except Exception as e:
+                    st.error(f"An error occured while deleting the file: {e}")
+
         tab_iframe, tab_markdown = st.tabs(["Text/PDF", "Markdown"])
         with tab_iframe:
             if content_type == "application/octet-stream":

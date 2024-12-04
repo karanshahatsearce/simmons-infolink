@@ -40,10 +40,12 @@ def get_document_dataframe():
         df["bucket"] = df["uri"].str.extract(r"gs://([^/]*)/")
         df["path"] = df["uri"].str.extract(r"gs://[^/]*/(.*)$")
         df["name"] = df["path"].apply(lambda p: pathlib.Path(p).name)
+
         common_prefix = os.path.commonprefix(
             df["path"].apply(lambda p: pathlib.Path(p).parent).to_list()
         )
         df["full_name"] = df["path"].apply(lambda p: p[len(common_prefix) :])
+        df["document_id"] = df["id"]
     return df
 
 st.set_page_config(
@@ -62,12 +64,12 @@ st.divider()
 st.markdown("""Full Document corpus accessible to the Search App.""")
 
 df = get_document_dataframe()
+# df = pd.DataFrame(fetch_all_agent_docs())
 
 if len(df) > 0:
     gb = GridOptionsBuilder()
-    gb.configure_column("name", header_name="Name", flex=0)
-    gb.configure_column("full_name", header_name="Full Name", flex=1)
-    gb.configure_selection()
+    gb.configure_column("name", header_name="Name", flex=2)
+    gb.configure_selection(selection_mode="single")
     gb.configure_pagination()
     gridOptions = gb.build()
 

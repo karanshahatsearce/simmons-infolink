@@ -23,7 +23,7 @@ import base64
 from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
-from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, extract_first_15_pages, summarize_with_gemini, extract_text_from_pdf, details
+from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, summarize_with_gemini, extract_text_from_pdf, details
 from google.cloud import documentai
 from PyPDF2 import PdfReader, PdfWriter
 

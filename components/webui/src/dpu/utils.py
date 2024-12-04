@@ -11,22 +11,13 @@ from vertexai.generative_models import GenerativeModel, Part
 import streamlit as st
 import os
 import pdfplumber
+from google.cloud import discoveryengine_v1beta as discoveryengine
+from google.cloud.discoveryengine_v1beta.types import DeleteDocumentRequest
+
 from types import SimpleNamespace
 
 details = SimpleNamespace(name="Karan Shah", email="karan.shah@searce.com", role="ML engineer")
 
-
-def extract_first_15_pages(input_pdf_path, output_pdf_path, max_pages=15):
-    """Extracts the first `max_pages` from a PDF and saves to a new file."""
-    reader = PdfReader(input_pdf_path)
-    writer = PdfWriter()
-    
-    for i in range(min(len(reader.pages), max_pages)):
-        writer.add_page(reader.pages[i])
-    
-    with open(output_pdf_path, "wb") as output_pdf:
-        writer.write(output_pdf)
-    return output_pdf_path
 
 def get_document_dataframe():
     """Fetch and process document data for display."""
@@ -133,3 +124,39 @@ def extract_text_from_pdf(pdf_file):
         for page in pdf.pages:
             text += page.extract_text() or ""
     return text
+
+def delete_metadata_from_eks(document_id):
+    """
+    Deletes document metadata from the EKS datastore.
+
+    Args:
+        document_id (str): The unique identifier of the document to delete.
+                           (e.g., b4f4330609ae54b626f8dd026c59090c)
+    """
+
+    client = discoveryengine.DocumentServiceClient()
+
+    # Extract project, location, and data store information
+    project_id = os.environ["PROJECT_ID"]
+    location = os.environ["AGENT_BUILDER_LOCATION"]
+    data_store_id = os.environ["AGENT_BUILDER_DATA_STORE_ID"]
+    collection = "default_collection"
+    branch = "0"
+
+    # Construct the full document path
+    document_path = (
+        f"projects/{project_id}/locations/{location}/collections/{collection}/"
+        f"dataStores/{data_store_id}/branches/{branch}/documents/{document_id}"
+    )
+
+    request = DeleteDocumentRequest(name=document_path)
+
+    try:
+        client.delete_document(request=request)
+        print(f"Metadata for document {document_id} successfully deleted from EKS datastore.")
+    except Exception as e:
+        raise Exception(f"Failed to delete metadata for {document_id}: {e}")
+    
+    st.write("")
+    df = pd.DataFrame(fetch_all_agent_docs())
+    st.write(df)
