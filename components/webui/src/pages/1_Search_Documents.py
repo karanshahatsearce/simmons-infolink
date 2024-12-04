@@ -12,20 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import pandas as pd
 import streamlit as st  # type: ignore
 from dpu.api import generate_answer
 from dpu.components import SIMMONS_LOGO, TITLE_LOGO, LOGO, PREAMBLE, choose_source_id, show_agent_document
-from fpdf import FPDF
+from fpdf import FPDF # type: ignore
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 import base64
 from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
-from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, summarize_with_gemini, extract_text_from_pdf, details
-from google.cloud import documentai
-from PyPDF2 import PdfReader, PdfWriter
+from dpu.utils import get_document_dataframe, upload_to_gcs, summarize_with_gemini, extract_text_from_pdf
 
 
 class PDF(FPDF):
@@ -136,65 +132,6 @@ with st.container():
         )
         st.session_state.answer = result["answer"]
         st.session_state.sources = result["sources"]
-
-
-# Upload Functionality
-st.markdown("### Upload a Document")
-
-df = get_document_dataframe()
-if len(df) > 0:
-    bucket_name = df["bucket"].iloc[0]
-else:
-    st.warning("No bucket information available.")
-    bucket_name = st.text_input("Enter GCS Bucket Name") 
-
-file = st.file_uploader("Choose a file to upload and then summarize: ")
-
-# State variables to manage action
-if "upload_triggered" not in st.session_state:
-    st.session_state["upload_triggered"] = False
-if "query_triggered" not in st.session_state:
-    st.session_state["query_triggered"] = False
-
-
-
-doc_summary = ""
-if file and bucket_name:
-    if st.button("Upload"):
-        try:
-            # Save the uploaded file locally
-            local_file_path = f"./{file.name}"
-            with open(local_file_path, "wb") as f:
-                f.write(file.getbuffer())
-
-            # Upload the file to GCS
-            destination_blob_name = file.name
-            with st.spinner("Uploading file..."):
-                message = upload_to_gcs(bucket_name, destination_blob_name, local_file_path)
-                st.success(message)
-
-            text = extract_text_from_pdf(local_file_path)
-            doc_summary = summarize_with_gemini(text)
-
-            st.session_state["upload_triggered"] = True
-            st.session_state["query_triggered"] = False
-            st.session_state.answer = doc_summary
-
-            # Refresh the session state
-            st.session_state["documents"] = get_document_dataframe()
-            st.rerun()
-        except Exception as e:
-            st.error(f"An error occurred during upload: {e}")
-
-# Query Functionality
-st.markdown(
-    """
-    <div style='text-align: center; display: flex; align-items: center; font-size: 24px'>
-        <hr style='flex-grow: 1; margin: 0 10px;'>OR<hr style='flex-grow: 1; margin: 0 10px;'>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
 
 st.write(
     """### Given a query, DocuWhizz will generate an answer with citations to the documents."""
@@ -310,8 +247,12 @@ if st.session_state.get("current_summary"):
 
     pdf.set_font("Times", "", 12)
     pdf_output = pdf.output(dest="S").encode("latin-1")
-    html = create_download_link(pdf_output, "summary_response")
-    st.markdown(html, unsafe_allow_html=True)
+    st.download_button(
+        label="Download PDF",
+        data=pdf_output,
+        file_name="summary_response.pdf",
+        mime="application/pdf",
+    )
 
 # Render list of other documents
 if st.session_state.sources:
