@@ -100,6 +100,9 @@ if "query_triggered" not in st.session_state:
     st.session_state["query_triggered"] = False
 if "upload_triggered" not in st.session_state:
     st.session_state["upload_triggered"] = False
+if "documents" not in st.session_state:
+    st.session_state["documents"] = get_document_dataframe()
+
 #
 # Form
 #
@@ -176,6 +179,10 @@ if file and bucket_name:
             st.session_state["upload_triggered"] = True
             st.session_state["query_triggered"] = False
             st.session_state.answer = doc_summary
+
+            # Refresh the session state
+            st.session_state["documents"] = get_document_dataframe()
+            st.rerun()
         except Exception as e:
             st.error(f"An error occurred during upload: {e}")
 

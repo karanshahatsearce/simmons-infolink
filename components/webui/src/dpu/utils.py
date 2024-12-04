@@ -13,7 +13,7 @@ import os
 import pdfplumber
 from google.cloud import discoveryengine_v1beta as discoveryengine
 from google.cloud.discoveryengine_v1beta.types import DeleteDocumentRequest
-
+from google.protobuf import struct_pb2
 from types import SimpleNamespace
 
 details = SimpleNamespace(name="Karan Shah", email="karan.shah@searce.com", role="ML engineer")
@@ -157,6 +157,3 @@ def delete_metadata_from_eks(document_id):
     except Exception as e:
         raise Exception(f"Failed to delete metadata for {document_id}: {e}")
     
-    st.write("")
-    df = pd.DataFrame(fetch_all_agent_docs())
-    st.write(df)

@@ -139,8 +139,6 @@ def show_gcs_object(
         "text/plain",
     ]
     if content_type in mime_types:
-        df = get_document_dataframe()
-        st.write(df)
         col1, col2, col3 = st.columns([20, 150, 150])
         with col1:
             if use_direct_link:
@@ -170,9 +168,7 @@ def show_gcs_object(
                     blob.delete()
                     delete_metadata_from_eks(document_id)
                     st.success(f"File {title} successfully deleted")
-
-                    if "documents" in st.session_state:
-                        st.session_state["documents"] = get_document_dataframe()
+                    st.session_state["documents"] = get_document_dataframe()
                 except Exception as e:
                     st.error(f"An error occured while deleting the file: {e}")
 
@@ -194,8 +190,6 @@ def show_gcs_object(
 
 
 def choose_related_document(related_docs: list, initial_value: int):
-
-    # Chosen row
     chosen_row = related_docs[initial_value]
 
     if len(related_docs) > 1:

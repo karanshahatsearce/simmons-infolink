@@ -63,16 +63,19 @@ with title_col:
 st.divider()
 st.markdown("""Full Document corpus accessible to the Search App.""")
 
-df = get_document_dataframe()
-# df = pd.DataFrame(fetch_all_agent_docs())
+if "documents" not in st.session_state:
+    st.session_state["documents"] = get_document_dataframe()
 
+df = st.session_state["documents"]
 if len(df) > 0:
+    # Configure AgGrid table
     gb = GridOptionsBuilder()
     gb.configure_column("name", header_name="Name", flex=2)
     gb.configure_selection(selection_mode="single")
     gb.configure_pagination()
     gridOptions = gb.build()
 
+    # Render AgGrid
     data = AgGrid(
         df,
         gridOptions=gridOptions,
@@ -80,5 +83,8 @@ if len(df) > 0:
         allow_unsafe_jscode=True,
     )
 
+    # Show document details when a row is selected
     if data["selected_rows"] is not None and len(data["selected_rows"]) > 0:
         show_agent_document(data["selected_rows"].iloc[0]["id"])
+else:
+    st.info("No documents available.")
