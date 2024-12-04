@@ -14,12 +14,12 @@
 
 import streamlit as st  # type: ignore
 from dpu.components import LOGO, TITLE_LOGO
-
+from dpu.utils import details
 logger = st.logger.get_logger(__name__)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 st.set_page_config(
-    page_title="Simmons InfoLink",
+    page_title="DocuWhizz",
     page_icon=TITLE_LOGO,
     layout="wide",
 )
@@ -29,15 +29,21 @@ with image_col:
     st.write("")
     st.image(LOGO, "", 256)
 with title_col:
-    st.title(":green[Simmons InfoLink]")
+    st.title(":green[DocuWhizz]")
 st.markdown("""   """)
-st.markdown(
-    """
-    ### About
-    Simmons InfoLink is an advanced application designed to search and summarize documents, providing precise answers with citations for improved knowledge access and decision-making.
+
+html_str = f"""
+<style>
+p.greeting {{
+  font: 16px;
+}}
+</style>
+<p class="greeting">Hi {details.name}! I'm DocuWhizz, here to help you with your document search requests. Feel free to ask any document-related questions, and I'd be happy to assist!</p>
+
+<p> DocuWhizz is an advanced application designed to search and summarize documents, providing precise answers with citations for improved knowledge access and decision-making.
     The app integrates with the Vertex AI Agent Builder using APIs.
 """
-)
+st.markdown(html_str, unsafe_allow_html=True)
 
 if st.button("Start Search"):
     st.switch_page("pages/1_Search_Documents.py")

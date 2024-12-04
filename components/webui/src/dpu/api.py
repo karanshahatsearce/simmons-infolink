@@ -111,8 +111,8 @@ def generate_answer(
             ),
         ),
         extractive_content_spec=discoveryengine.SearchRequest.ContentSearchSpec.ExtractiveContentSpec(
-            max_extractive_answer_count=5,
-            max_extractive_segment_count=5,
+            max_extractive_answer_count=3,
+            max_extractive_segment_count=3,
             return_extractive_segment_score=True,
         ),
     )
@@ -141,7 +141,7 @@ def generate_answer(
 
     idx_set = set()
     id_set = set()
-    for c in response.summary.summary_with_metadata.citation_metadata.citations:
+    for c in response.summary.summary_with_metadata.citation_metadata.citations[:3]:
         for s in c.sources:
             ref_index = s.reference_index
             if ref_index not in idx_set:

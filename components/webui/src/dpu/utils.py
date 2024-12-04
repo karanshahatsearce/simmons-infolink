@@ -11,6 +11,10 @@ from vertexai.generative_models import GenerativeModel, Part
 import streamlit as st
 import os
 import pdfplumber
+from types import SimpleNamespace
+
+details = SimpleNamespace(name="Karan Shah", email="karan.shah@searce.com", role="ML engineer")
+
 
 def extract_first_15_pages(input_pdf_path, output_pdf_path, max_pages=15):
     """Extracts the first `max_pages` from a PDF and saves to a new file."""
@@ -120,8 +124,8 @@ def summarize_document_with_docai(project_id, location, processor_id, file_path,
 
 def summarize_with_gemini(text):
     model = GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content([f"Please summarize the following content in a concise manner, ensuring that only relevant information is included. The summary should be written in exactly 500 words. Structure the response with two paragraphs for a high-level overview and a bulleted list of detailed points. Use the exact wording from the provided content where possible. Do not add any additional information, and avoid bolding any text. DO NOT TRY TO BOLD ANYTHING! \n\n{text}"])
-    return response.text
+    response = model.generate_content([f"Please summarize the following content in a concise manner, ensuring that only relevant information is included. The summary should be written in exactly 500 words. Structure the response with two paragraphs for a high-level overview and a bulleted list of detailed points. Use the exact wording from the provided content where possible. Do not add any additional information, and avoid bolding any text. DO NOT TRY TO BOLD ANYTHING! Also, for bullet points, use '-' and not '*', please. Here's the text: \n\n{text}"])
+    return response.text.replace("*", "")
 
 def extract_text_from_pdf(pdf_file):
     text = ""

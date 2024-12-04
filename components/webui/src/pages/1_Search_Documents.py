@@ -23,13 +23,17 @@ import base64
 from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
-from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, extract_first_15_pages, summarize_with_gemini, extract_text_from_pdf
+from dpu.utils import get_document_dataframe, upload_to_gcs, download_and_parse_output, batch_process_document, extract_first_15_pages, summarize_with_gemini, extract_text_from_pdf, details
 from google.cloud import documentai
 from PyPDF2 import PdfReader, PdfWriter
 
+
 class PDF(FPDF):
-    def header(self):
-        self.set_font("Arial", "B", 12)
+    def __init__(self):
+        super().__init__()
+        self.set_margins(left=20, top=20, right=20)
+        self.set_auto_page_break(auto=True, margin=20)
+
 
 
 # Put into a single place
@@ -186,7 +190,7 @@ st.markdown(
 )
 
 st.write(
-    """### Given a query, Simmons InfoLink will generate an answer with citations to the documents."""
+    """### Given a query, DocuWhizz will generate an answer with citations to the documents."""
 )
 
 query_col, button_col, example_col = st.columns([85, 15, 15])
@@ -230,13 +234,13 @@ if st.session_state["query_triggered"]:
     st.session_state["current_summary"] = st.session_state.answer
     st.session_state["current_summary_type"] = "query"
     st.markdown("### :blue[Query-Based Summary:]")
-    st.text_area("Summary", value=st.session_state.answer, height=240, key="query_summary_textarea")
+    st.text_area("Summary", value=st.session_state.answer, height=240, key="query_summary_textarea", disabled=True)
 
 elif st.session_state["upload_triggered"]:
     st.session_state["current_summary"] = doc_summary
     st.session_state["current_summary_type"] = "upload"
     st.markdown("### :blue[Document-Based Summary:]")
-    st.text_area("Summary", value=doc_summary, height=240, key="upload_summary_textarea")
+    st.text_area("Summary", value=doc_summary, height=240, key="upload_summary_textarea", disabled=True)
 
 # Logic to avoid simultaneous execution
 if st.session_state["upload_triggered"] and st.session_state["query_triggered"]:
@@ -254,105 +258,53 @@ def create_download_link(value, filename):
 
 # Render the answer if there is a response
 if st.session_state.get("current_summary"):
-    username = "karan shah"
+    pdf = PDF()
+    pdf.add_page()
+    llm = GenerativeModel("gemini-1.5-flash")
 
-    # Export to PDF button
-    export_as_pdf = st.button("Export Report")
-    if export_as_pdf:
-        # Create PDF instance
-        st.write(st.session_state["upload_triggered"])
-        pdf = PDF()
-        pdf.add_page()
-        llm = GenerativeModel("gemini-1.5-flash")
-        if st.session_state["upload_triggered"]:
-            title = llm.generate_content("Give me one concise pdf title regarding the following answer: " 
-                                            + st.session_state.answer + " without mentioning 'here are some options'. Also, please do NOT add any hashtags in front of the title you generate.")
-            pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
-            safe_answer = st.session_state.answer.encode("ascii", "ignore").decode("ascii")
-            pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
+    if st.session_state["upload_triggered"]:
+        doc_sum = st.session_state["current_summary"]
+        title_prompt = f"Generate a concise title for the summary of the uploaded document: {doc_sum}. Do not include hashtags or preambles."
+    else:
+        title_prompt = f"Generate a concise title for the query: {question}. Do not include hashtags or preambles."
+    title = llm.generate_content(title_prompt)
 
-            pdf.set_font('Times', '', 10)
-            current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
-            pdf.set_xy(150, 23)
-            pdf.cell(0, 10, current_time, align='R')
+    pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
 
-            # Add the centered title below
-            pdf.set_xy(0, 30)
-            pdf.set_font('Arial', 'B', 14)
-            pdf.cell(0, 10, pdf_title, align='C')
+    pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
+    
+    # Add date and title
+    pdf.set_font('Times', '', 10)
+    current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
+    pdf.set_xy(150, 23)
+    pdf.cell(0, 10, current_time, align='R')
 
-            pdf.ln(10)
+    pdf.ln(10)
 
-            # Response and formatted answer
-            pdf.set_font('Times', 'B', 12)
-            pdf.multi_cell(0, 5, "Response:")
+    pdf.set_xy(0, 35)
+    pdf.set_font('Arial', 'B', 16)
+    pdf.multi_cell(0, 5, pdf_title, align='C')
 
-            pdf.set_font('Times', '', 12)
-            pdf.multi_cell(0, 5, safe_answer)
+    pdf.ln(5)
 
-            pdf.ln(5)
+    pdf.set_font("Times", "", 13)
+    pdf.multi_cell(0, 5, st.session_state["current_summary"].encode("ascii", "ignore").decode("ascii"))
 
-            pdf_output = pdf.output(dest="S").encode("latin-1")
-            html = create_download_link(pdf_output, "summary_response")
-            st.markdown(html, unsafe_allow_html=True)
+    if not st.session_state["upload_triggered"]:
+        pdf.set_font("Times", "B", 14)
+        pdf.multi_cell(0, 7, "Sources:")
+        if st.session_state.sources:
+            pdf.set_font("Times", "", 14)
+            for i, source in enumerate(st.session_state.sources[:3], start=1):
+                source_title = source.get("uri", "Unknown Document").encode("ascii", "ignore").decode("ascii").replace("gs://docs-input-applied-ai-practice00/", "")
+                pdf.multi_cell(0, 7, f"[{i}] {source_title}")
         else:
-            # Create a custom title using Gemini
-            title = llm.generate_content("Give me one concise pdf title regarding the following query: " 
-                                            + question + " without mentioning here are some options. Also, please do NOT add any hashtags in front of the title you generate.")
-            
-            pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
-            formatted_question = question.strip().capitalize()
-            formatted_question = formatted_question.encode("ascii", "ignore").decode("ascii")
-            safe_answer = st.session_state.answer.encode("ascii", "ignore").decode("ascii")
+            pdf.multi_cell(0, 7, "No sources available.")
 
-            pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
-
-            pdf.set_font('Times', '', 10)
-            current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
-            pdf.set_xy(150, 23)  # Position on the right side of the page
-            pdf.cell(0, 10, current_time, align='R')  # Align text to the right
-
-            # Add the centered title below
-            pdf.set_xy(0, 30)
-            pdf.set_font('Arial', 'B', 14)
-            pdf.cell(0, 10, pdf_title, align='C')
-
-            pdf.ln(10)
-
-            # Query and formatted question
-            pdf.set_font('Times', 'B', 12)
-            pdf.multi_cell(0, 7, "Query:")
-            pdf.set_font('Times', '', 12)
-            pdf.multi_cell(0, 7, formatted_question)
-
-            pdf.ln(5)
-
-            # Response and formatted answer
-            pdf.set_font('Times', 'B', 12)
-            pdf.multi_cell(0, 5, "Response:")
-
-            pdf.set_font('Times', '', 12)
-            pdf.multi_cell(0, 5, safe_answer)
-
-            pdf.ln(5)
-
-            document_urls = get_document_urls()
-
-            # Sources Section
-            pdf.set_font('Times', 'B', 12)
-            pdf.multi_cell(0, 7, "Sources:")
-            if st.session_state.sources:
-                pdf.set_font('Times', '', 12)
-                for i, source in enumerate(st.session_state.sources[:3], start=1):
-                    source_title = source.get("title", "Unknown Document").encode("ascii", "ignore").decode("ascii")
-                    pdf.multi_cell(0, 7, f"[{i}] {source_title}")
-            else:
-                pdf.multi_cell(0, 7, "No sources available.")
-
-            pdf_output = pdf.output(dest="S").encode("latin-1")
-            html = create_download_link(pdf_output, "summary_response")
-            st.markdown(html, unsafe_allow_html=True)
-
+    pdf.set_font("Times", "", 12)
+    pdf_output = pdf.output(dest="S").encode("latin-1")
+    html = create_download_link(pdf_output, "summary_response")
+    st.markdown(html, unsafe_allow_html=True)
 
 # Render list of other documents
 if st.session_state.sources:
