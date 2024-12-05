@@ -100,9 +100,98 @@ if "documents" not in st.session_state:
     st.session_state["documents"] = get_document_dataframe()
 
 #
+# Dropdown for document selection
+#
+selected_document = ""
+df = st.session_state["documents"]
+if len(df) > 0:
+    document_names = df["name"].tolist()
+    selected_document = st.selectbox(
+        """### Select an existing document to summarize it:""",
+        options=["Select a document"] + document_names,
+    )
+
+    if selected_document != "Select a document":
+        selected_row = df[df["name"] == selected_document].iloc[0]
+        st.write(f"### Selected Document: {selected_document}")
+
+        # Summarize button
+        if st.button("Summarize Document"):
+            try:
+                # Fetch the full path (uri) of the selected document
+                selected_doc_uri = selected_row["uri"]
+
+                # Download and extract text from the document
+                from google.cloud import storage
+                storage_client = storage.Client()
+                bucket_name = selected_row["bucket"]
+                path = selected_row["path"]
+                bucket = storage_client.bucket(bucket_name)
+                blob = bucket.blob(path)
+                local_file_path = f"./{selected_document}"
+                blob.download_to_filename(local_file_path)
+
+                text = extract_text_from_pdf(local_file_path)
+
+                # Generate a summary
+                summary = summarize_with_gemini(text)
+
+                st.session_state["doc_triggered"] = True
+                st.session_state["current_summary"] = summary
+                st.session_state["current_summary_type"] = "summarize"
+
+                st.write("### Document Summary")
+                st.text_area("Summary", value=summary, height=300, disabled=True)
+            except Exception as e:
+                st.error(f"An error occurred while summarizing: {e}")
+
+else:
+    st.info("No documents available.")
+
+
+# Add an export as PDF button here
+if st.session_state.get("current_summary"):
+    pdf = PDF()
+    pdf.add_page()
+
+    pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
+    
+    # Add date and title
+    pdf.set_font('Times', '', 10)
+    current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
+    pdf.set_xy(150, 23)
+    pdf.cell(0, 10, current_time, align='R')
+
+    pdf.ln(10)
+
+    selected_doc_title = f"Summary of Financials for {selected_document}"
+    pdf.set_font("Arial", "B", 16)
+    pdf.set_xy(15, 35)
+    pdf.multi_cell(0, 5, selected_doc_title, align='C')
+    
+    pdf.ln(5)
+
+    pdf.set_font("Times", "", 13)
+
+    cleaned_summary = (
+        st.session_state["current_summary"]
+        .encode("ascii", "ignore")
+        .decode("ascii")
+    )
+    pdf.multi_cell(0, 5, cleaned_summary)
+    
+    pdf_output = pdf.output(dest="S").encode("latin-1", "replace")
+    st.download_button(
+        label="Download Summary as PDF",
+        data=pdf_output,
+        file_name="document_summary.pdf",
+        mime="application/pdf",
+    )
+
+#
 # Form
 #
-
+st.divider()
 if "preamble" not in st.session_state:
     st.session_state["preamble"] = PREAMBLE
 
@@ -250,7 +339,7 @@ if st.session_state.get("current_summary"):
     st.download_button(
         label="Download PDF",
         data=pdf_output,
-        file_name="summary_response.pdf",
+        file_name="query_response.pdf",
         mime="application/pdf",
     )
 
