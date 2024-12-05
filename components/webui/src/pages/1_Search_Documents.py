@@ -195,10 +195,10 @@ if st.session_state.get("current_summary"):
     )
     pdf.multi_cell(0, 5, cleaned_summary)
     
-    pdf_output = pdf.output(dest="S").encode("latin-1", "replace")
+    pdf_output = pdf.output(dest="S")
     st.download_button(
         label="Download Summary as PDF",
-        data=pdf_output,
+        data=bytes(pdf_output),
         file_name="document_summary.pdf",
         mime="application/pdf",
     )
@@ -336,10 +336,10 @@ if st.session_state["query_triggered"]:
                 pdf.multi_cell(0, 7, "No sources available.")
 
         pdf.set_font("Times", "", 12)
-        pdf_output = pdf.output(dest="S").encode("latin-1")
+        pdf_output = pdf.output(dest="S")
         st.download_button(
             label="Download PDF",
-            data=pdf_output,
+            data=bytes(pdf_output),
             file_name="query_response.pdf",
             mime="application/pdf",
         )
