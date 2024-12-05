@@ -22,7 +22,7 @@ from datetime import datetime
 from vertexai.generative_models import GenerativeModel
 from dpu.api import fetch_all_agent_docs
 from dpu.utils import get_document_dataframe, upload_to_gcs, summarize_with_gemini, extract_text_from_pdf
-
+from textwrap import wrap
 
 class PDF(FPDF):
     def __init__(self):
@@ -277,6 +277,7 @@ with example_col:
 
 st.divider()
 
+doc_summary = ""
 # Handle and display the relevant summary
 if st.session_state["query_triggered"]:
     st.session_state["current_summary"] = st.session_state.answer
@@ -324,16 +325,16 @@ if st.session_state["query_triggered"]:
         pdf.set_font("Times", "", 13)
         pdf.multi_cell(0, 5, st.session_state["current_summary"].encode("ascii", "ignore").decode("ascii"))
 
-        if not st.session_state["upload_triggered"]:
-            pdf.set_font("Times", "B", 14)
-            pdf.multi_cell(0, 7, "Sources:")
-            if st.session_state.sources:
-                pdf.set_font("Times", "", 14)
-                for i, source in enumerate(st.session_state.sources[:3], start=1):
-                    source_title = source.get("uri", "Unknown Document").encode("ascii", "ignore").decode("ascii").replace("gs://docs-input-applied-ai-practice00/", "")
-                    pdf.multi_cell(0, 7, f"[{i}] {source_title}")
-            else:
-                pdf.multi_cell(0, 7, "No sources available.")
+        pdf.set_font("Times", "B", 14)
+        pdf.multi_cell(0, 10, "Sources:", align="L")
+        if st.session_state.sources:
+            pdf.set_font("Times", "", 12)
+
+            for i, source in enumerate(st.session_state.sources[:3], start=1):  # Iterate over the top 3 sources
+                source_title = source.get("uri", "Unknown Document").encode("ascii", "ignore").decode("ascii")
+                source_title = source_title.replace("gs://docs-input-applied-ai-practice00/", "")
+                pdf.set_x(20)
+                pdf.multi_cell(0, 7, f"[{i}] {source_title}", align="L")
 
         pdf.set_font("Times", "", 12)
         pdf_output = pdf.output(dest="S")
