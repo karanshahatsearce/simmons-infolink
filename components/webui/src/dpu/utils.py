@@ -115,7 +115,7 @@ def summarize_document_with_docai(project_id, location, processor_id, file_path,
 
 def summarize_with_gemini(text):
     model = GenerativeModel("gemini-1.5-flash")
-    response = model.generate_content([f"Please summarize the following content in a concise manner, ensuring that only relevant information is included. The summary should be written in exactly 500 words. Structure the response with two paragraphs for a high-level overview and a bulleted list of detailed points. Use the exact wording from the provided content where possible. Do not add any additional information, and avoid bolding any text. DO NOT TRY TO BOLD ANYTHING! Also, for bullet points, use '-' and not '*', please. Here's the text: \n\n{text}"])
+    response = model.generate_content([f"Please summarize the following content in a concise manner, ensuring that only relevant information is included. The summary should be written in exactly 500 words. Structure the response with two paragraphs for a high-level overview and a bulleted list of detailed points. Use the exact wording from the provided content where possible. Do not add any additional information, and avoid bolding any text. DO NOT TRY TO BOLD ANYTHING! Also, for bullet points, use '-' and not '*', please. Here's the text: \n\n{text}. \n\n Make sure you add 600 words."])
     return response.text.replace("*", "")
 
 def extract_text_from_pdf(pdf_file):

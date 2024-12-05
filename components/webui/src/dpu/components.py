@@ -38,7 +38,7 @@ LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/logo.png")
 TITLE_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/title_logo.png")
 SIMMONS_LOGO = os.path.join(os.path.dirname(__file__), "../../app/images/simmons-logo.jpeg")
 # change this to a string
-PREAMBLE = "Given the conversation between a user and a Simmons Bank assistant and some search results, create a final answer for the assistant that can provide insights from Simmons Bank Quarterly reports. The answer should use all relevant information from the search results, not introduce any additional information, and use exactly the same words as the search results when possible. The assistant's answer should be more than 50 sentences. The assistant's answer should have 2 paragraphs for summary and a list of details. DO NOT TRY TO BOLD ANYTHING. For bullet points, use '-' and nothing else, no asterisk. Moreover, for the sources, do NOT PUT A SOURCES SECTION."
+PREAMBLE = "Given the conversation between a user and a Simmons Bank assistant and some search results, create a final answer for the assistant that can provide insights from Simmons Bank Quarterly reports. The answer should use all relevant information from the search results, not introduce any additional information, and use exactly the same words as the search results when possible. The assistant's answer should be more than 50 sentences, and about 1000 words. The assistant's answer should have atleast 2 paragraphs for summary and a list of details. DO NOT TRY TO BOLD ANYTHING. For bullet points, use '-' and nothing else, no asterisk. Moreover, for the sources, do NOT PUT A SOURCES SECTION."
 
 
 #

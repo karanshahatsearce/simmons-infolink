@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import streamlit as st  # type: ignore
 from dpu.api import generate_answer
 from dpu.components import SIMMONS_LOGO, TITLE_LOGO, LOGO, PREAMBLE, choose_source_id, show_agent_document
@@ -109,6 +109,7 @@ if len(df) > 0:
     selected_document = st.selectbox(
         """### Select an existing document to summarize it:""",
         options=["Select a document"] + document_names,
+        key="selected_document"
     )
 
     if selected_document != "Select a document":
@@ -140,14 +141,28 @@ if len(df) > 0:
                 st.session_state["current_summary"] = summary
                 st.session_state["current_summary_type"] = "summarize"
 
-                st.write("### Document Summary")
-                st.text_area("Summary", value=summary, height=300, disabled=True)
+                # Remove document after use
+                try:
+                    if os.path.exists(local_file_path):
+                        os.remove(local_file_path)
+                    else:
+                        st.warning(f"File does not exist.")
+                except Exception as e:
+                    st.error(f"An error occured while deleting the file: {e}")
             except Exception as e:
                 st.error(f"An error occurred while summarizing: {e}")
 
 else:
     st.info("No documents available.")
 
+if st.session_state.get("doc_triggered") and st.session_state.get("current_summary"):
+    st.write("### Document Summary")
+    st.text_area(
+        "Summary",
+        value=st.session_state["current_summary"],
+        height=300,
+        disabled=True,
+    )
 
 # Add an export as PDF button here
 if st.session_state.get("current_summary"):
@@ -267,7 +282,67 @@ if st.session_state["query_triggered"]:
     st.session_state["current_summary"] = st.session_state.answer
     st.session_state["current_summary_type"] = "query"
     st.markdown("### :blue[Query-Based Summary:]")
-    st.text_area("Summary", value=st.session_state.answer, height=240, key="query_summary_textarea", disabled=True)
+    st.text_area(
+        "Summary", 
+        value=st.session_state.answer, 
+        height=240, 
+        key="query_summary_textarea", 
+        disabled=True
+    )
+
+    # Render the answer if there is a response
+    if st.session_state["query_triggered"] and st.session_state.get("current_summary"):
+        pdf = PDF()
+        pdf.add_page()
+        llm = GenerativeModel("gemini-1.5-flash")
+
+        if st.session_state["upload_triggered"]:
+            doc_sum = st.session_state["current_summary"]
+            title_prompt = f"Generate a concise title for the summary of the uploaded document: {doc_sum}. Do not include hashtags or preambles."
+        else:
+            title_prompt = f"Generate a concise title for the query: {question}. Do not include hashtags or preambles."
+        title = llm.generate_content(title_prompt)
+
+        pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
+
+        pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
+        
+        # Add date and title
+        pdf.set_font('Times', '', 10)
+        current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
+        pdf.set_xy(150, 23)
+        pdf.cell(0, 10, current_time, align='R')
+
+        pdf.ln(10)
+
+        pdf.set_xy(0, 35)
+        pdf.set_font('Arial', 'B', 16)
+        pdf.multi_cell(0, 5, pdf_title, align='C')
+
+        pdf.ln(5)
+
+        pdf.set_font("Times", "", 13)
+        pdf.multi_cell(0, 5, st.session_state["current_summary"].encode("ascii", "ignore").decode("ascii"))
+
+        if not st.session_state["upload_triggered"]:
+            pdf.set_font("Times", "B", 14)
+            pdf.multi_cell(0, 7, "Sources:")
+            if st.session_state.sources:
+                pdf.set_font("Times", "", 14)
+                for i, source in enumerate(st.session_state.sources[:3], start=1):
+                    source_title = source.get("uri", "Unknown Document").encode("ascii", "ignore").decode("ascii").replace("gs://docs-input-applied-ai-practice00/", "")
+                    pdf.multi_cell(0, 7, f"[{i}] {source_title}")
+            else:
+                pdf.multi_cell(0, 7, "No sources available.")
+
+        pdf.set_font("Times", "", 12)
+        pdf_output = pdf.output(dest="S").encode("latin-1")
+        st.download_button(
+            label="Download PDF",
+            data=pdf_output,
+            file_name="query_response.pdf",
+            mime="application/pdf",
+        )
 
 elif st.session_state["upload_triggered"]:
     st.session_state["current_summary"] = doc_summary
@@ -289,59 +364,6 @@ def create_download_link(value, filename):
     b64 = base64.b64encode(value)
     return f'<a href="data:application/octet-stream;base64,{b64.decode()}" download="{filename}.pdf">Download file</a>'
 
-# Render the answer if there is a response
-if st.session_state.get("current_summary"):
-    pdf = PDF()
-    pdf.add_page()
-    llm = GenerativeModel("gemini-1.5-flash")
-
-    if st.session_state["upload_triggered"]:
-        doc_sum = st.session_state["current_summary"]
-        title_prompt = f"Generate a concise title for the summary of the uploaded document: {doc_sum}. Do not include hashtags or preambles."
-    else:
-        title_prompt = f"Generate a concise title for the query: {question}. Do not include hashtags or preambles."
-    title = llm.generate_content(title_prompt)
-
-    pdf_title = title.text.strip().encode("ascii", "ignore").decode("ascii")
-
-    pdf.image(SIMMONS_LOGO, x=10, y=8, w=100)
-    
-    # Add date and title
-    pdf.set_font('Times', '', 10)
-    current_time = datetime.now().strftime("%b %d, %Y at %I:%M %p")
-    pdf.set_xy(150, 23)
-    pdf.cell(0, 10, current_time, align='R')
-
-    pdf.ln(10)
-
-    pdf.set_xy(0, 35)
-    pdf.set_font('Arial', 'B', 16)
-    pdf.multi_cell(0, 5, pdf_title, align='C')
-
-    pdf.ln(5)
-
-    pdf.set_font("Times", "", 13)
-    pdf.multi_cell(0, 5, st.session_state["current_summary"].encode("ascii", "ignore").decode("ascii"))
-
-    if not st.session_state["upload_triggered"]:
-        pdf.set_font("Times", "B", 14)
-        pdf.multi_cell(0, 7, "Sources:")
-        if st.session_state.sources:
-            pdf.set_font("Times", "", 14)
-            for i, source in enumerate(st.session_state.sources[:3], start=1):
-                source_title = source.get("uri", "Unknown Document").encode("ascii", "ignore").decode("ascii").replace("gs://docs-input-applied-ai-practice00/", "")
-                pdf.multi_cell(0, 7, f"[{i}] {source_title}")
-        else:
-            pdf.multi_cell(0, 7, "No sources available.")
-
-    pdf.set_font("Times", "", 12)
-    pdf_output = pdf.output(dest="S").encode("latin-1")
-    st.download_button(
-        label="Download PDF",
-        data=pdf_output,
-        file_name="query_response.pdf",
-        mime="application/pdf",
-    )
 
 # Render list of other documents
 if st.session_state.sources:
