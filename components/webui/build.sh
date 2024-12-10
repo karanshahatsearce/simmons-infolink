@@ -14,6 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+export PROJECT_ID="applied-ai-practice00"
+export REGION=“us”
+export IAP_ADMIN_ACCOUNT="karan.shah@searce.com"
+export SERVICE_ACCOUNT_ID="karan.shah@searce.com"
+export AGENT_BUILDER_DATA_STORE_ID="eks-data-store"
+export AGENT_BUILDER_LOCATION="us"
+export AGENT_BUILDER_SEARCH_ID="ent-search-agent"
+export AR_REPO="simmons-infolink"
+export AR_REPO_LOCATION="us-central1"
+export SERVICE_NAME="docuwhizz"
+
 cp "$HOME"/.config/gcloud/application_default_credentials.json ./adc.json
 
 gcloud builds submit --tag "$AR_REPO_LOCATION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$AR_REPO/$SERVICE_NAME"

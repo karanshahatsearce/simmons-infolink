@@ -50,7 +50,7 @@ SEARCH_APP_ID = os.environ["AGENT_BUILDER_SEARCH_ID"]
 # Search interfaces
 #
 
-
+st.cache_resource
 
 
 def search_service_client() -> discoveryengine.SearchServiceClient:
@@ -90,15 +90,11 @@ def generate_answer(
     # Refer to the `ContentSearchSpec` reference for all supported fields:
     # https://cloud.google.com/python/docs/reference/discoveryengine/latest/google.cloud.discoveryengine_v1.types.SearchRequest.ContentSearchSpec
     content_search_spec = discoveryengine.SearchRequest.ContentSearchSpec(
-        # For information about snippets, refer to:
-        # https://cloud.google.com/generative-ai-app-buxilder/docs/snippets
         snippet_spec=discoveryengine.SearchRequest.ContentSearchSpec.SnippetSpec(
             return_snippet=True
         ),
-        # For information about search summaries, refer to:
-        # https://cloud.google.com/generative-ai-app-builder/docs/get-search-summaries
         summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
-            summary_result_count=10,
+            summary_result_count=3,
             include_citations=True,
             ignore_adversarial_query=True,
             ignore_non_summary_seeking_query=True,
@@ -116,8 +112,6 @@ def generate_answer(
         ),
     )
 
-    # Refer to the `SearchRequest` reference for all supported fields:
-    # https://cloud.google.com/python/docs/reference/discoveryengine/latest/google.cloud.discoveryengine_v1.types.SearchRequest
     request = discoveryengine.SearchRequest(
         serving_config=serving_config,
         query=search_query,
@@ -170,7 +164,7 @@ def generate_answer(
 # Convert documents (whether search or fetched or listed) into a generic object
 #
 
-
+st.cache_resource
 
 def _document_to_dict(doc: Document) -> Optional[dict]:
 
@@ -224,7 +218,7 @@ def _document_to_dict(doc: Document) -> Optional[dict]:
 # Document list & fetchers
 #
 
-
+st.cache_resource
 
 
 def document_service_client() -> discoveryengine.DocumentServiceClient:
@@ -240,6 +234,7 @@ def document_service_client() -> discoveryengine.DocumentServiceClient:
     )
 
 
+st.cache_resource
 def fetch_all_agent_docs() -> list[dict]:
     """List Enterprise Search Corpus"""
 
@@ -259,7 +254,7 @@ def fetch_all_agent_docs() -> list[dict]:
             corpus.append(tmp)
     return corpus
 
-
+st.cache_resource
 def fetch_agent_doc(doc_id: str) -> Optional[dict]:
     logger.info(f"Fetching doc id {doc_id}")
     client = document_service_client()
@@ -287,11 +282,11 @@ def fetch_agent_doc(doc_id: str) -> Optional[dict]:
 # Google Cloud Storage accessors
 #
 
-
+st.cache_resource
 def get_storage_client():
     return storage.Client(client_info=ClientInfo(user_agent=USER_AGENT))
 
-
+st.cache_resource
 def fetch_gcs_blob(bucket: str, path: str) -> storage.Blob:
     logger.info(f"Downloading object gs://{bucket}/{path}")
     blob = get_storage_client().bucket(bucket).get_blob(path)

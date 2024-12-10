@@ -266,7 +266,7 @@ with button_col:
             st.session_state["query_triggered"] = True
             st.session_state["upload_triggered"] = False
         except Exception as e:
-            st.error(f"An error occurred while processing the query: {e}")
+            st.write("Please enter a query.")
 
 with example_col:
     st.write("")
@@ -326,7 +326,8 @@ if st.session_state["query_triggered"]:
         pdf.multi_cell(0, 5, st.session_state["current_summary"].encode("ascii", "ignore").decode("ascii"))
 
         pdf.set_font("Times", "B", 14)
-        pdf.multi_cell(0, 10, "Sources:", align="L")
+        pdf.set_x(20)
+        pdf.cell(0, 10, "Sources:", align="L")
         if st.session_state.sources:
             pdf.set_font("Times", "", 12)
 

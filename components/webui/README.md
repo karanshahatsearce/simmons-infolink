@@ -54,9 +54,9 @@ streamlit run ../../components/webui/src/Home.py
 Set environment variables
 
 ```commandline
-export AR_REPO=[your-ar-repo-name]
-export AR_REPO_LOCATION=[your-ar-repo-region]
-export SERVICE_NAME=[your-app-name]
+export AR_REPO="simmons-infolink"
+export AR_REPO_LOCATION="us-central1"
+export SERVICE_NAME="docuwhizz"
 ```
 
 If this is the first time you are trying to deploy the App in your GCP Project,
@@ -76,13 +76,13 @@ gcloud services enable run.googleapis.com
 Build the app and save it in the Artifact repository
 
 ```commandline
-./build.sh
+../../components/webui/build.sh
 ```
 
 Deploy the app from the Artifact repository to Cloud Run
 
 ```commandline
-./deploy.sh
+../../components/webui/deploy.sh
 ```
 
 Test locally using Cloud Run proxy
