@@ -2,6 +2,12 @@
 
 FROM python:3.12-slim AS builder
 
+ENV GOOGLE_CLOUD_PROJECT=applied-ai-practice00
+ENV AR_REPO_LOCATION=us-central1
+ENV SERVICE_NAME=docuwhizz
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/adc.json
+COPY adc.json /app/adc.json
+
 ENV HOME=/app
 WORKDIR $HOME
 

@@ -14,6 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Set required environment variables
+export SERVICE_NAME="docuwhizz"
+export AR_REPO_LOCATION="us-central1"
+export GOOGLE_CLOUD_PROJECT="applied-ai-practice00"
+export AR_REPO="simmons-infolink"
+export SEARCH_DATASTORE_ID="eks-data-store"
+export SEARCH_APP_ID="ent-search-agent"
+
 gcloud run deploy "$SERVICE_NAME" \
   --port=8080 \
   --image="$AR_REPO_LOCATION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$AR_REPO/$SERVICE_NAME" \
