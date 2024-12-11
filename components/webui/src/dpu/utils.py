@@ -154,6 +154,7 @@ def delete_metadata_from_eks(document_id):
     try:
         client.delete_document(request=request)
         print(f"Metadata for document {document_id} successfully deleted from EKS datastore.")
+        st.rerun()
     except Exception as e:
         raise Exception(f"Failed to delete metadata for {document_id}: {e}")
     

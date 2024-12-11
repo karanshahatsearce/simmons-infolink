@@ -63,8 +63,8 @@ with title_col:
 st.divider()
 st.markdown("""Full Document corpus accessible to the Search App. Select a document to either View, Download, or Delete it.""")
 
-if "documents" not in st.session_state:
-    st.session_state["documents"] = get_document_dataframe()
+# if "documents" not in st.session_state:
+st.session_state["documents"] = get_document_dataframe()
 
 df = st.session_state["documents"]
 if len(df) > 0:
